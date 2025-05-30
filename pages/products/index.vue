@@ -1,107 +1,68 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useHead } from '#imports'
+import { useProductStore } from '~/stores/product'
+import { storeToRefs } from 'pinia'
 
-const config = useRuntimeConfig()
-const products = ref([])
-const categories = ref([])
-const currentPage = ref(1)
-const totalPages = ref(1)
-const selectedCategory = ref(null)
-const searchQuery = ref('')
-const sortBy = ref('created_at')
-const sortOrder = ref('desc')
-const loading = ref(true)
-const error = ref(null)
+const store = useProductStore()
 
-const fetchProducts = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    let url = `${config.public.apiBase}/api/v1/products?page=${currentPage.value}&sort=${sortOrder.value === 'desc' ? '-' : ''}${sortBy.value}`
-    
-    if (selectedCategory.value) {
-      url += `&filter[category]=${selectedCategory.value}`
-    }
-    
-    if (searchQuery.value) {
-      url += `&filter[name]=${searchQuery.value}`
-    }
+// Use storeToRefs to maintain reactivity
+const { 
+  products, 
+  categories, 
+  loading, 
+  error,
+  filters,
+  pagination,
+} = storeToRefs(store)
 
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error('Failed to fetch products')
-    }
-    const data = await response.json()
-    console.log('Products data:', data) // Debug log
-    products.value = data.data
-    totalPages.value = Math.ceil(data.meta.total / data.meta.per_page)
-  } catch (err) {
-    console.error('Error fetching products:', err)
-    error.value = err
-  } finally {
-    loading.value = false
-  }
-}
-
-const fetchCategories = async () => {
-  try {
-    const response = await fetch(`${config.public.apiBase}/api/v1/categories`)
-    if (!response.ok) {
-      throw new Error('Failed to fetch categories')
-    }
-    const data = await response.json()
-    console.log('Categories data:', data) // Debug log
-    categories.value = data
-  } catch (err) {
-    console.error('Error fetching categories:', err)
-  }
+const formatPrice = (price: string) => {
+  return new Intl.NumberFormat('fa-IR').format(parseInt(price)) + ' تومان'
 }
 
 onMounted(() => {
-  fetchProducts()
-  fetchCategories()
-})
-
-watch([selectedCategory, searchQuery, sortBy, sortOrder], () => {
-  currentPage.value = 1
-  fetchProducts()
+  store.fetchProducts()
+  store.fetchCategories()
 })
 
 useHead({
-  title: 'Our Products - Cosmetic Store',
+  title: 'محصولات - فروشگاه لوازم آرایشی',
+  htmlAttrs: {
+    dir: 'rtl',
+    lang: 'fa'
+  },
   meta: [
     {
       name: 'description',
-      content: 'Browse our wide selection of beauty and cosmetic products'
+      content: 'مشاهده و خرید محصولات آرایشی و بهداشتی'
     },
     {
       property: 'og:title',
-      content: 'Our Products - Cosmetic Store'
+      content: 'محصولات - فروشگاه لوازم آرایشی'
     },
     {
       property: 'og:description',
-      content: 'Browse our wide selection of beauty and cosmetic products'
+      content: 'مشاهده و خرید محصولات آرایشی و بهداشتی'
     }
   ]
 })
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-vazir">
     <!-- Loading State -->
     <div v-if="loading && !products.length" class="flex justify-center items-center min-h-[400px]">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
-        <p class="text-gray-600">Loading products...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-600">در حال بارگذاری محصولات...</p>
       </div>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="flex justify-center items-center min-h-[400px]">
       <div class="text-center text-red-600">
-        <p class="text-xl mb-2">Error loading products</p>
-        <p class="text-sm">Please try again later</p>
+        <p class="text-xl mb-2">خطا در بارگذاری محصولات</p>
+        <p class="text-sm">لطفاً دوباره تلاش کنید</p>
       </div>
     </div>
 
@@ -110,18 +71,20 @@ useHead({
       <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="relative">
           <input
-            v-model="searchQuery"
+            v-model="filters.search"
             type="text"
-            placeholder="Search products..."
+            placeholder="جستجوی محصولات..."
             class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            @input="store.setSearch($event.target.value)"
           />
         </div>
 
         <select
-          v-model="selectedCategory"
+          v-model="filters.category"
           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          @change="store.setCategory($event.target.value ? Number($event.target.value) : null)"
         >
-          <option :value="null">All Categories</option>
+          <option :value="null">همه دسته‌بندی‌ها</option>
           <option
             v-for="category in categories"
             :key="category.id"
@@ -132,13 +95,25 @@ useHead({
         </select>
 
         <select
-          v-model="sortBy"
+          v-model="filters.sort"
           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          @change="store.setSort($event.target.value)"
         >
-          <option value="created_at">Newest</option>
-          <option value="price">Price</option>
-          <option value="name">Name</option>
+          <option value="created_at">جدیدترین</option>
+          <option value="price">قیمت</option>
+          <option value="name">نام</option>
         </select>
+      </div>
+
+      <!-- Active Filters -->
+      <div v-if="store.hasFiltersApplied" class="mb-6 flex items-center gap-4">
+        <span class="text-sm text-gray-500">فیلترهای فعال:</span>
+        <button
+          @click="store.resetFilters()"
+          class="text-sm text-red-600 hover:text-red-800 transition-colors duration-200"
+        >
+          پاک کردن همه فیلترها
+        </button>
       </div>
 
       <!-- Products Grid -->
@@ -147,9 +122,9 @@ useHead({
           v-for="product in products"
           :key="product.id"
           :to="`/products/${product.id}`"
-          class="group"
+          class="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-200"
         >
-          <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
+          <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-t-lg bg-gray-200">
             <img
               v-if="product.media?.length"
               :src="product.media[0].url"
@@ -157,57 +132,57 @@ useHead({
               class="h-full w-full object-cover object-center group-hover:opacity-75"
             />
           </div>
-          <div class="mt-4 flex justify-between">
-            <div>
-              <h3 class="text-sm text-gray-700">{{ product.name }}</h3>
-              <p class="mt-1 text-sm text-gray-500">{{ product.category?.name }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm font-medium text-gray-900">${{ product.price }}</p>
+          <div class="p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-1">{{ product.name }}</h3>
+            <p class="text-sm text-gray-500 mb-2">{{ product.category?.name }}</p>
+            <div class="flex justify-between items-center">
+              <p class="text-lg font-bold text-blue-600">{{ formatPrice(product.price) }}</p>
               <p v-if="product.compare_at_price" class="text-sm text-gray-500 line-through">
-                ${{ product.compare_at_price }}
+                {{ formatPrice(product.compare_at_price) }}
               </p>
+            </div>
+            <div class="mt-2 flex items-center space-x-2 space-x-reverse">
+              <span v-if="product.stock > 0" class="text-sm text-green-600">موجود</span>
+              <span v-else class="text-sm text-red-600">ناموجود</span>
             </div>
           </div>
         </NuxtLink>
       </div>
 
       <!-- No Products Found -->
-      <div v-else class="flex justify-center items-center min-h-[200px]">
-        <p class="text-gray-500">No products found</p>
+      <div v-else class="flex justify-center items-center min-h-[200px] bg-gray-50 rounded-lg">
+        <p class="text-gray-500">محصولی یافت نشد</p>
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="mt-8 flex justify-center space-x-2">
+      <div v-if="pagination.totalPages > 1" class="mt-8 flex justify-center gap-2">
         <button
-          v-for="page in totalPages"
+          v-for="page in pagination.totalPages"
           :key="page"
-          @click="currentPage = page; fetchProducts()"
+          @click="store.setPage(page)"
           :class="[
-            'px-4 py-2 rounded-lg',
-            currentPage === page
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            'px-4 py-2 rounded-lg transition-colors duration-200',
+            pagination.currentPage === page
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           ]"
         >
-          {{ page }}
+          {{ new Intl.NumberFormat('fa-IR').format(page) }}
         </button>
       </div>
     </template>
   </div>
 </template>
 
-<style scoped>
-.aspect-w-1 {
-  position: relative;
-  padding-bottom: 100%;
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+.font-vazir {
+  font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
 }
 
-.aspect-w-1 > img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+/* Fix RTL layout issues */
+.space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
 }
 </style> 
