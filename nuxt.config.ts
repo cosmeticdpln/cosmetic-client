@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxt/image',
+    '@pinia/nuxt',
   ],
   
   runtimeConfig: {
@@ -25,7 +26,11 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Cosmetic Store',
+      title: 'فروشگاه لوازم آرایشی',
+      htmlAttrs: {
+        dir: 'rtl',
+        lang: 'fa'
+      },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
