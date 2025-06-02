@@ -1,4 +1,24 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const videoRef = ref<HTMLVideoElement | null>(null)
+
+const handleVideoLoaded = () => {
+  if (videoRef.value) {
+    videoRef.value.play().catch((error) => {
+      console.error('Video autoplay failed:', error)
+    })
+  }
+}
+
+onMounted(() => {
+  if (videoRef.value) {
+    videoRef.value.play().catch((error) => {
+      console.error('Video autoplay failed:', error)
+    })
+  }
+})
+
 useHead({
   title: 'هلمیز - محصولات آرایشی و بهداشتی هوشمند',
   meta: [
@@ -15,13 +35,17 @@ useHead({
     <!-- Hero Section with Video -->
     <section class="relative h-screen">
       <video
+        ref="videoRef"
         class="absolute inset-0 w-full h-full object-cover"
         autoplay
         loop
         muted
         playsinline
+        @loadeddata="handleVideoLoaded"
       >
         <source src="/videos/ai-beauty.mp4" type="video/mp4" />
+        <!-- Fallback image if video fails -->
+        <img src="/images/hero-fallback.jpg" alt="AI Beauty" class="absolute inset-0 w-full h-full object-cover" />
       </video>
       <div class="absolute inset-0 bg-black bg-opacity-50"></div>
       <div class="relative h-full flex items-center justify-center text-center">

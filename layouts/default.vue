@@ -1,7 +1,14 @@
 <template>
   <div class="min-h-screen flex flex-col font-vazir">
     <!-- Header -->
-    <header class="bg-white shadow-sm fixed w-full top-0 z-50">
+    <header 
+      class="w-full z-50 transition-all duration-300 fixed top-0"
+      :class="[
+        isHome ? (
+          isScrolled ? 'translate-y-0 opacity-100 bg-white shadow-sm' : 'translate-y-0 opacity-0 pointer-events-none'
+        ) : 'bg-white shadow-sm'
+      ]"
+    >
       <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20">
         <div class="flex justify-between items-center h-full">
           <!-- Logo -->
@@ -46,7 +53,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow mt-20">
+    <main :class="['flex-grow', { 'mt-20': !isHome }]">
       <slot />
     </main>
 
@@ -107,6 +114,29 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const isHome = computed(() => route.path === '/')
+const isScrolled = ref(false)
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 100
+}
+
+onMounted(() => {
+  if (isHome.value) {
+    window.addEventListener('scroll', handleScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (isHome.value) {
+    window.removeEventListener('scroll', handleScroll)
+  }
+})
+
 useHead({
   htmlAttrs: {
     dir: 'rtl',
