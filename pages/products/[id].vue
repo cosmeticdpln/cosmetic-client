@@ -61,14 +61,54 @@ const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('fa-IR')
 }
 
-useHead(() => ({
-  title: store.currentProduct?.name || 'جزئیات محصول',
-  htmlAttrs: { dir: 'rtl', lang: 'fa' },
-  meta: [{
-    name: 'description',
-    content: store.currentProduct?.description?.replace(/<[^>]*>/g, '') || 'توضیحات محصول'
-  }]
-}))
+useHead(() => {
+  const name = store.currentProduct?.name || 'جزئیات محصول'
+  const description = store.currentProduct?.description?.replace(/<[^>]*>/g, '') || 'توضیحات محصول'
+  const image = store.currentProduct?.media?.[0]?.url || '/default.jpg'
+  const price = store.currentProduct?.price || ''
+  const url = `http://localhost/products/${route.params.id}`
+
+  return {
+    title: name,
+    htmlAttrs: { dir: 'rtl', lang: 'fa' },
+    meta: [
+      { name: 'description', content: description },
+      { property: 'og:title', content: name },
+      { property: 'og:description', content: description },
+      { property: 'og:image', content: image },
+      { property: 'og:type', content: 'product' },
+      { property: 'og:url', content: url },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: name },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:image', content: image },
+      { name: 'robots', content: 'index, follow' }
+    ],
+    script: [
+      {
+        type: 'application/ld+json',
+        innerHTML: JSON.stringify({
+          '@context': 'https://schema.org/',
+          '@type': 'Product',
+          name,
+          image: [image],
+          description,
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'IRR',
+            price: price,
+            availability: store.currentProduct?.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url
+          }
+        })
+      }
+    ],
+    __dangerouslyDisableSanitizersByTagID: {
+      'ld-product': ['innerHTML']
+    }
+  }
+})
+
 </script>
 
 <template>
@@ -98,7 +138,7 @@ useHead(() => ({
 
     <!-- Product Content -->
     <div v-if="store.currentProduct" class="relative">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         <!-- Left: Image -->
         <div class="space-y-4">
           <div
@@ -148,7 +188,7 @@ useHead(() => ({
           </div>
         </div>
 
-        <!-- Right: Info -->
+        <!-- Middle: Info -->
         <div class="flex flex-col">
           <div class="border-b border-gray-200 pb-6">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
@@ -206,16 +246,9 @@ useHead(() => ({
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- Description and Specifications -->
-      <div class="space-y-8">
-        <div class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">توضیحات محصول</h2>
-          <div class="prose prose-blue max-w-none" v-html="store.currentProduct.description"></div>
-        </div>
-
-        <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6">
+        <!-- Right: Specifications -->
+        <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6 h-fit">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">مشخصات محصول</h2>
           <div class="space-y-6">
             <div v-for="spec in store.currentProduct.specifications" :key="spec.id" class="bg-gray-50 rounded-lg p-4">
@@ -229,6 +262,12 @@ useHead(() => ({
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Description -->
+      <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">توضیحات محصول</h2>
+        <div class="prose prose-blue max-w-none" v-html="store.currentProduct.description"></div>
       </div>
 
       <!-- Back Button -->
