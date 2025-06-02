@@ -98,8 +98,8 @@
           <div>
             <h4 class="text-lg font-semibold mb-4">اطلاعات تماس</h4>
             <ul class="space-y-2 text-gray-400">
-              <li>تهران، خیابان ولیعصر</li>
-              <li>تلفن: ۰۲۱-۱۲۳۴۵۶۷۸</li>
+              <li>قم، خیابان </li>
+              <li>تلفن: ۰۲۵-۱۲۳۴۵۶۷۸</li>
               <li>ایمیل: info@helmis.com</li>
             </ul>
           </div>

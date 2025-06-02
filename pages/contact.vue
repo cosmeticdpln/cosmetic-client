@@ -83,7 +83,7 @@
                 </div>
                 <div class="mr-4">
                   <h3 class="text-lg font-semibold text-gray-900">آدرس</h3>
-                  <p class="text-gray-600">تهران، خیابان ولیعصر، بالاتر از میدان ونک</p>
+                  <p class="text-gray-600">قم، خیابان ،</p>
                 </div>
               </div>
 
