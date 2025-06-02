@@ -8,45 +8,44 @@ const store = useProductStore()
 
 const selectedImage = ref(0)
 const isHovering = ref(false)
+const zoomFactor = 2.5
 
 const mainImage = computed(() => {
   if (!store.currentProduct?.media?.length) return ''
   return store.currentProduct.media[selectedImage.value]?.url || ''
 })
 
-// Zoom logic
 const zoomBoxVisible = ref(false)
 const zoomPosition = ref({ x: 0, y: 0 })
 const lensPosition = ref({ x: 0, y: 0 })
 const lensSize = 150
 
 const handleMouseMove = (e: MouseEvent) => {
-  const rect = (e.target as HTMLElement).getBoundingClientRect()
-  const offsetX = e.clientX - rect.left
-  const offsetY = e.clientY - rect.top
-
-  // Set zoom background position (% of image)
+  const image = e.target as HTMLElement
+  const rect = image.getBoundingClientRect()
+  const mouseX = rect.width - (e.clientX - rect.left)
+  const mouseY = e.clientY - rect.top
+  const maxX = rect.width - lensSize
+  const maxY = rect.height - lensSize
+  const boundedX = Math.max(0, Math.min(maxX, mouseX - lensSize / 2))
+  const boundedY = Math.max(0, Math.min(maxY, mouseY - lensSize / 2))
+  lensPosition.value = {x: boundedX, y: boundedY}
+  const zoomX = ((rect.width - mouseX) / rect.width) * 100
+  const zoomY = (mouseY / rect.height) * 100
   zoomPosition.value = {
-    x: (offsetX / rect.width) * 100,
-    y: (offsetY / rect.height) * 100
-  }
-
-  // Set lens position in actual pixels (no RTL flipping!)
-  lensPosition.value = {
-    x: offsetX - lensSize / 2,
-    y: offsetY - lensSize / 2
+    x: Math.max(0, Math.min(100, zoomX)),
+    y: Math.max(0, Math.min(100, zoomY))
   }
 }
-
-
 
 const zoomBackgroundStyle = computed(() => {
   if (!mainImage.value) return {}
   return {
     backgroundImage: `url(${mainImage.value})`,
     backgroundPosition: `${zoomPosition.value.x}% ${zoomPosition.value.y}%`,
-    backgroundSize: '200%',
-    backgroundRepeat: 'no-repeat'
+    backgroundSize: '250%',
+    backgroundRepeat: 'no-repeat',
+    transition: 'background-position 0.05s ease-out'
   }
 })
 
@@ -64,16 +63,11 @@ const formatDate = (date: string) => {
 
 useHead(() => ({
   title: store.currentProduct?.name || 'جزئیات محصول',
-  htmlAttrs: {
-    dir: 'rtl',
-    lang: 'fa'
-  },
-  meta: [
-    {
-      name: 'description',
-      content: store.currentProduct?.description?.replace(/<[^>]*>/g, '') || 'توضیحات محصول'
-    }
-  ]
+  htmlAttrs: { dir: 'rtl', lang: 'fa' },
+  meta: [{
+    name: 'description',
+    content: store.currentProduct?.description?.replace(/<[^>]*>/g, '') || 'توضیحات محصول'
+  }]
 }))
 </script>
 
@@ -98,7 +92,7 @@ useHead(() => ({
     <!-- ✅ Zoom Box -->
     <div
         v-if="zoomBoxVisible"
-        class="fixed top-10 left-10 w-[700px] h-[700px] border-2 border-blue-500 z-50 rounded shadow-lg hidden md:block"
+        class="fixed top-10 left-10 w-[700px] h-[700px] border-2 border-blue-500 z-50 rounded shadow-lg hidden md:block overflow-hidden"
         :style="zoomBackgroundStyle"
     ></div>
 
@@ -120,17 +114,19 @@ useHead(() => ({
                 :class="{ 'opacity-70': isHovering }"
             />
 
-            <!-- ✅ Lens -->
+            <!-- Lens -->
             <div
-                v-if="isHovering"
+                v-show="isHovering"
                 class="absolute bg-white/30 border-2 border-blue-400 backdrop-blur-sm pointer-events-none"
                 :style="{
-                width: lensSize + 'px',
-                height: lensSize + 'px',
-                top: lensPosition.y + 'px',
-                left: lensPosition.x + 'px',
-                borderRadius: '0.5rem',
-              }"
+                  position: 'absolute',
+                  width: `${lensSize}px`,
+                  height: `${lensSize}px`,
+                  right: `${lensPosition.x}px`,
+                  top: `${lensPosition.y}px`,
+                  borderRadius: '0.5rem',
+                  zIndex: 10
+                }"
             ></div>
           </div>
 
