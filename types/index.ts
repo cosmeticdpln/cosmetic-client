@@ -17,9 +17,16 @@ export interface Tag {
 export interface SpecificationType {
   id: number
   name: string
+  slug: string
+  type: 'text' | 'number' | 'boolean' | 'select' | 'multiselect'
+  options: string[]
+  is_visible: boolean
+  is_required: boolean
+  sort_order: number
   group: {
     id: number
     name: string
+    sort_order: number
   }
 }
 
@@ -33,7 +40,15 @@ export interface Category {
   id: number
   name: string
   slug: string
-  description: string
+  description?: string
+  parent_id?: number | null
+  children?: Category[]
+}
+
+export interface ProductSpecification {
+  id: number
+  value: string | number | boolean | string[]
+  specification_type: SpecificationType
 }
 
 export interface Product {
@@ -49,8 +64,15 @@ export interface Product {
   featured: boolean
   volume: string
   expiry_date: string
+  category_id: number
   category: Category
-  specifications: Specification[]
-  media: Media[]
+  specifications: ProductSpecification[]
+  media: Array<{
+    id: number
+    url: string
+    type: string
+  }>
   tags: Tag[]
+  created_at: string
+  updated_at: string
 } 

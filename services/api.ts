@@ -1,4 +1,4 @@
-import type { Product, Category } from '~/types'
+import type { Product, Category, SpecificationType } from '~/types'
 
 class ApiService {
   private baseURL: string = 'http://localhost:8000/api/v1'
@@ -37,6 +37,11 @@ class ApiService {
 
   async getCategory(id: string | number) {
     return this.request<{ data: Category }>(`/categories/${id}`)
+  }
+
+  // Specifications
+  async getSpecificationTypes() {
+    return this.request<{ data: SpecificationType[] }>('/specification-types')
   }
 }
 
