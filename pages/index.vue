@@ -35,13 +35,13 @@ useHead({
     <!-- Hero Section with Video -->
     <section class="relative h-screen">
       <video
-        ref="videoRef"
-        class="absolute inset-0 w-full h-full object-cover"
-        autoplay
-        loop
-        muted
-        playsinline
-        @loadeddata="handleVideoLoaded"
+          ref="videoRef"
+          class="absolute inset-0 w-full h-full object-cover"
+          autoplay
+          loop
+          muted
+          playsinline
+          @loadeddata="handleVideoLoaded"
       >
         <source src="/videos/ai-beauty.mp4" type="video/mp4" />
         <!-- Fallback image if video fails -->
@@ -58,14 +58,14 @@ useHead({
           </p>
           <div class="flex justify-center space-x-4 space-x-reverse">
             <NuxtLink
-              to="/products"
-              class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                to="/products"
+                class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               مشاهده محصولات
             </NuxtLink>
             <a
-              href="#about"
-              class="bg-white bg-opacity-20 text-white px-8 py-3 rounded-lg hover:bg-opacity-30 transition-colors"
+                href="#about"
+                class="bg-white bg-opacity-20 text-white px-8 py-3 rounded-lg hover:bg-opacity-30 transition-colors"
             >
               درباره ما
             </a>
@@ -148,9 +148,9 @@ useHead({
           <div v-for="i in 4" :key="i" class="group">
             <div class="relative aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
               <img
-                src="/images/placeholder.png"
-                alt="Product image"
-                class="h-full w-full object-cover object-center group-hover:opacity-75"
+                  src="/images/placeholder.png"
+                  alt="Product image"
+                  class="h-full w-full object-cover object-center group-hover:opacity-75"
               />
             </div>
             <div class="mt-4">
@@ -163,8 +163,8 @@ useHead({
 
         <div class="text-center mt-12">
           <NuxtLink
-            to="/products"
-            class="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              to="/products"
+              class="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
             مشاهده همه محصولات
           </NuxtLink>
@@ -189,9 +189,9 @@ useHead({
           </div>
           <div class="relative h-96">
             <img
-              src="/images/about.png"
-              alt="About Helmis"
-              class="absolute inset-0 w-full h-full object-cover rounded-lg shadow-lg"
+                src="/images/about.png"
+                alt="About Helmis"
+                class="absolute inset-0 w-full h-full object-cover rounded-lg shadow-lg"
             />
           </div>
         </div>
@@ -210,13 +210,13 @@ useHead({
         <form class="max-w-md mx-auto">
           <div class="flex gap-4">
             <input
-              type="email"
-              placeholder="ایمیل خود را وارد کنید"
-              class="flex-1 px-4 py-3 rounded-lg text-gray-900"
+                type="email"
+                placeholder="ایمیل خود را وارد کنید"
+                class="flex-1 px-4 py-3 rounded-lg text-gray-900"
             />
             <button
-              type="submit"
-              class="bg-white text-blue-900 px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors"
+                type="submit"
+                class="bg-white text-blue-900 px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors"
             >
               عضویت
             </button>

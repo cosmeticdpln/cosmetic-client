@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useHead, useRoute } from '#imports'
 import { useProductStore } from '~/stores/product'
 
@@ -49,8 +49,28 @@ const zoomBackgroundStyle = computed(() => {
   }
 })
 
+// Add scroll handling for shopping cart
+const handleScroll = () => {
+  const cart = document.getElementById('shopping-cart')
+  if (!cart) return
+
+  const cartRect = cart.getBoundingClientRect()
+  const shouldStick = window.scrollY > cartRect.top
+
+  if (shouldStick) {
+    cart.classList.add('sticky')
+  } else {
+    cart.classList.remove('sticky')
+  }
+}
+
 onMounted(async () => {
   await store.fetchProduct(route.params.id as string)
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 const formatPrice = (price: string) => {
@@ -67,6 +87,7 @@ useHead(() => {
   const image = store.currentProduct?.media?.[0]?.url || '/default.jpg'
   const price = store.currentProduct?.price || ''
   const url = `http://localhost/products/${route.params.id}`
+  const stock = store.currentProduct?.stock ?? 0
 
   return {
     title: name,
@@ -97,7 +118,7 @@ useHead(() => {
             '@type': 'Offer',
             priceCurrency: 'IRR',
             price: price,
-            availability: store.currentProduct?.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            availability: stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
             url
           }
         })
@@ -137,23 +158,23 @@ useHead(() => {
     ></div>
 
     <!-- Product Content -->
-    <div v-if="store.currentProduct" class="relative">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <!-- Left: Image -->
-        <div class="space-y-4">
+    <div v-if="store.currentProduct" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Left: Product Images -->
+      <div>
+        <div class="space-y-6">
+          <!-- Main Image -->
           <div
-              class="w-full aspect-w-1 aspect-h-1 relative overflow-hidden rounded-lg"
-              @mouseenter="isHovering = true; zoomBoxVisible = true"
-              @mouseleave="isHovering = false; zoomBoxVisible = false"
-              @mousemove="handleMouseMove"
+            class="relative aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100"
+            @mousemove="handleMouseMove"
+            @mouseenter="isHovering = true; zoomBoxVisible = true"
+            @mouseleave="isHovering = false; zoomBoxVisible = false"
           >
             <img
-                :src="mainImage"
-                :alt="store.currentProduct.name"
-                class="w-full h-full object-cover transition-opacity duration-300"
-                :class="{ 'opacity-70': isHovering }"
+              :src="mainImage"
+              :alt="store.currentProduct.name"
+              class="h-full w-full object-cover object-center"
+              draggable="false"
             />
-
             <!-- Lens -->
             <div
                 v-show="isHovering"
@@ -170,87 +191,63 @@ useHead(() => {
             ></div>
           </div>
 
-          <!-- Thumbnails -->
+          <!-- Thumbnail Images -->
           <div class="grid grid-cols-4 gap-4">
             <button
-                v-for="(image, index) in store.currentProduct.media"
-                :key="image.id"
-                @click="selectedImage = index"
-                class="relative aspect-w-1 aspect-h-1 overflow-hidden rounded-lg bg-gray-100 transition-all duration-200 hover:opacity-80"
-                :class="{ 'ring-2 ring-blue-500': selectedImage === index }"
+              v-for="(image, index) in store.currentProduct.media"
+              :key="image.id"
+              @click="selectedImage = index"
+              class="relative aspect-w-1 aspect-h-1 overflow-hidden rounded-lg bg-gray-100 transition-all duration-200 hover:opacity-80"
+              :class="{ 'ring-2 ring-blue-500': selectedImage === index }"
             >
               <img
-                  :src="image.url"
-                  :alt="`${store.currentProduct.name} - تصویر ${index + 1}`"
-                  class="h-full w-full object-cover object-center"
+                :src="image.url"
+                :alt="`${store.currentProduct.name} - تصویر ${index + 1}`"
+                class="h-full w-full object-cover object-center"
               />
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Middle: Info -->
-        <div class="flex flex-col">
-          <div class="border-b border-gray-200 pb-6">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
-            <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
-          </div>
+      <!-- Right: Product Info -->
+      <div class="space-y-6">
+        <!-- Title Section -->
+        <div class="border-b border-gray-200 pb-6">
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
+          <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
+        </div>
 
-          <div class="py-6 space-y-6">
-            <div class="flex items-center">
-              <span class="text-3xl font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
-              <span v-if="store.currentProduct.compare_at_price" class="mr-4 text-lg text-gray-500 line-through">
-                {{ formatPrice(store.currentProduct.compare_at_price) }}
+        <!-- Shopping Cart Section -->
+        <div id="shopping-cart" class="bg-white rounded-lg shadow-sm p-6">
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">قیمت:</span>
+              <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
+            </div>
+            <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
+              <span class="text-gray-600">قیمت قبلی:</span>
+              <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">وضعیت:</span>
+              <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
+                {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
               </span>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <span class="text-sm text-gray-600">وضعیت موجودی:</span>
-                <div :class="store.currentProduct.stock > 0 ? 'text-green-600' : 'text-red-600'">
-                  {{ store.currentProduct.stock > 0 ? 'موجود' : 'ناموجود' }}
-                  <span v-if="store.currentProduct.stock > 0">({{ store.currentProduct.stock }} عدد)</span>
-                </div>
-              </div>
-
-              <div v-if="store.currentProduct.volume" class="bg-gray-50 p-4 rounded-lg">
-                <span class="text-sm text-gray-600">حجم:</span>
-                <div class="text-gray-900">{{ store.currentProduct.volume }}</div>
-              </div>
-
-              <div v-if="store.currentProduct.sku" class="bg-gray-50 p-4 rounded-lg">
-                <span class="text-sm text-gray-600">کد محصول:</span>
-                <div class="text-gray-900 font-mono">{{ store.currentProduct.sku }}</div>
-              </div>
-
-              <div v-if="store.currentProduct.expiry_date" class="bg-gray-50 p-4 rounded-lg">
-                <span class="text-sm text-gray-600">تاریخ انقضا:</span>
-                <div class="text-gray-900">{{ formatDate(store.currentProduct.expiry_date) }}</div>
-              </div>
-            </div>
-
-            <div v-if="store.currentProduct.tags?.length" class="flex flex-wrap gap-2">
-              <span
-                  v-for="tag in store.currentProduct.tags"
-                  :key="tag.id"
-                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-              >
-                {{ tag.name }}
-              </span>
-            </div>
-
             <button
                 class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                :disabled="store.currentProduct.stock <= 0"
+                :disabled="(store.currentProduct?.stock ?? 0) <= 0"
             >
               افزودن به سبد خرید
             </button>
           </div>
         </div>
 
-        <!-- Right: Specifications -->
-        <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6 h-fit">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">مشخصات محصول</h2>
-          <div class="space-y-6">
+        <!-- Product Specifications -->
+        <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">مشخصات محصول</h2>
+          <div class="space-y-4">
             <div v-for="spec in store.currentProduct.specifications" :key="spec.id" class="bg-gray-50 rounded-lg p-4">
               <div class="font-medium text-gray-900 mb-2">{{ spec.type.group.name }}</div>
               <div class="flex justify-between">
@@ -262,27 +259,68 @@ useHead(() => {
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Description -->
-      <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <!-- Tags -->
+        <div v-if="store.currentProduct.tags?.length" class="flex flex-wrap gap-2">
+          <span
+            v-for="tag in store.currentProduct.tags"
+            :key="tag.id"
+            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+          >
+            {{ tag.name }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-8">
+      <NuxtLink
+        to="/products"
+        class="inline-flex items-center justify-center px-4 py-3 text-base font-medium text-blue-600 hover:text-blue-700 transition-colors"
+      >
+        ← بازگشت به لیست محصولات
+      </NuxtLink>
+    </div>
+
+    <!-- ✅ Sticky Cart in Description Section -->
+    <div v-if="store.currentProduct?.description" class="mt-12 bg-white rounded-lg shadow-sm p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">توضیحات محصول</h2>
         <div class="prose prose-blue max-w-none" v-html="store.currentProduct.description"></div>
       </div>
 
-      <!-- Back Button -->
-      <div class="mt-8">
-        <NuxtLink
-            to="/products"
-            class="inline-flex items-center justify-center px-4 py-3 text-base font-medium text-blue-600 hover:text-blue-700 transition-colors"
-        >
-          ← بازگشت به لیست محصولات
-        </NuxtLink>
+      <div class="lg:col-span-1">
+        <div class="sticky top-8 bg-white shadow-lg p-6 rounded-lg">
+          <h2 class="text-lg font-bold mb-4 text-gray-800">سبد خرید</h2>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">قیمت:</span>
+              <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
+            </div>
+            <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
+              <span class="text-gray-600">قیمت قبلی:</span>
+              <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">وضعیت:</span>
+              <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
+                {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
+              </span>
+            </div>
+            <button
+                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                :disabled="(store.currentProduct?.stock ?? 0) <= 0"
+            >
+              افزودن به سبد خرید
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Not Found -->
-    <div v-else class="flex justify-center items-center min-h-[400px]">
+    <div v-if="!store.loading && !store.error && !store.currentProduct" class="flex justify-center items-center min-h-[400px]">
       <div class="text-center text-gray-600">
         <p class="text-xl mb-2">محصول یافت نشد</p>
         <NuxtLink to="/products" class="text-blue-600 hover:underline">
@@ -306,6 +344,22 @@ useHead(() => {
 }
 
 img {
-  user-drag: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Improve lens movement */
+.pointer-events-none {
+  pointer-events: none;
+  user-select: none;
+}
+
+.relative {
+  position: relative;
+  z-index: 1;
+}
+
+.absolute {
+  position: absolute;
 }
 </style>
