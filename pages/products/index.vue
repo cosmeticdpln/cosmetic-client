@@ -81,29 +81,58 @@ const prevImage = (productId: number, totalImages: number) => {
 
 // Initialize tempFilters with current store filters
 onMounted(() => {
-  tempFilters.value = {
-    search: filters.value.search,
-    category: filters.value.category,
-    sort: filters.value.sort,
-    specifications: { ...filters.value.specifications }
-  }
-  store.fetchProducts()
   store.fetchCategories()
-  store.fetchSpecificationTypes()
+  // Ensure specificationTypes are fetched before initializing filters
+  store.fetchSpecificationTypes().then(() => {
+    tempFilters.value = {
+      search: filters.value.search,
+      category: filters.value.category,
+      sort: filters.value.sort,
+      specifications: initializeSpecifications(filters.value.specifications)
+    }
+    store.fetchProducts()
+  })
 })
 
 // Watch for filter panel open/close
 watch(isFilterOpen, (newValue) => {
   if (newValue) {
-    // When opening, sync with current store filters
+    // When opening, sync with current store filters and ensure proper initialization
     tempFilters.value = {
       search: filters.value.search,
       category: filters.value.category,
       sort: filters.value.sort,
-      specifications: { ...filters.value.specifications }
+      specifications: initializeSpecifications(filters.value.specifications)
     }
   }
 })
+
+// Function to initialize specifications, handling multiselect and number range types
+const initializeSpecifications = (currentSpecs: Record<string, any>) => {
+  const newSpecs: Record<string, any> = {}
+  specificationTypes.value.forEach(specType => {
+    if (specType.type === 'multiselect') {
+      // Ensure multiselect values are always arrays
+      newSpecs[specType.slug] = Array.isArray(currentSpecs[specType.slug])
+        ? [...currentSpecs[specType.slug]] // Copy existing array
+        : [] // Initialize as empty array
+    } else if (specType.type === 'number') {
+      // Handle number range (min/max)
+      newSpecs[`${specType.slug}_min`] = currentSpecs[`${specType.slug}_min`] !== undefined
+        ? currentSpecs[`${specType.slug}_min`]
+        : null
+      newSpecs[`${specType.slug}_max`] = currentSpecs[`${specType.slug}_max`] !== undefined
+        ? currentSpecs[`${specType.slug}_max`]
+        : null
+    } else {
+      // For other types, use existing value or null if not present
+      newSpecs[specType.slug] = currentSpecs[specType.slug] !== undefined
+        ? currentSpecs[specType.slug]
+        : null
+    }
+  })
+  return newSpecs
+}
 
 // Function to apply filters
 const applyFilters = () => {
@@ -123,7 +152,7 @@ const resetAllFilters = () => {
     search: '',
     category: null,
     sort: 'created_at',
-    specifications: {}
+    specifications: initializeSpecifications({}) // Reset with empty initial values
   }
   store.resetFilters()
   isFilterOpen.value = false
