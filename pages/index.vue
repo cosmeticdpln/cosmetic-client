@@ -225,4 +225,4 @@ useHead({
       </div>
     </section>
   </div>
-</template> 
+</template>

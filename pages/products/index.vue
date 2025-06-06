@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { useProductStore } from '~/stores/product'
 import { storeToRefs } from 'pinia'
 import { useMotion } from '@vueuse/motion'
+import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 
 const store = useProductStore()
+const isFilterOpen = ref(false)
+const tempFilters = ref({
+  search: '',
+  category: null as number | null,
+  sort: 'created_at'
+})
 
 // Use storeToRefs to maintain reactivity
 const { 
@@ -17,8 +24,8 @@ const {
   pagination,
 } = storeToRefs(store)
 
-// Animation variants
-const productCardVariants = {
+// Define motion variants
+const motionVariants = {
   initial: {
     opacity: 0,
     y: 50,
@@ -30,25 +37,23 @@ const productCardVariants = {
       duration: 600,
     },
   },
-}
-
-const imageHoverVariants = {
-  initial: { scale: 1 },
-  hover: { scale: 1.05 },
+  visible: {
+    once: true
+  }
 }
 
 // Function to create staggered delay for products
-const getProductDelay = (index: number) => {
-  return {
-    enter: {
-      ...productCardVariants.enter,
-      transition: {
-        duration: 600,
-        delay: index * 100,
-      },
+const getProductDelay = (index: number) => ({
+  initial: motionVariants.initial,
+  enter: {
+    ...motionVariants.enter,
+    transition: {
+      duration: 600,
+      delay: index * 100,
     },
-  }
-}
+  },
+  visible: motionVariants.visible
+})
 
 // Add currentImageIndexes to track current image for each product
 const currentImageIndexes = ref<{ [key: number]: number }>({})
@@ -71,10 +76,50 @@ const prevImage = (productId: number, totalImages: number) => {
   currentImageIndexes.value[productId] = (currentImageIndexes.value[productId] - 1 + totalImages) % totalImages
 }
 
+// Initialize tempFilters with current store filters
 onMounted(() => {
+  tempFilters.value = {
+    search: filters.value.search,
+    category: filters.value.category,
+    sort: filters.value.sort
+  }
   store.fetchProducts()
   store.fetchCategories()
 })
+
+// Watch for filter panel open/close
+watch(isFilterOpen, (newValue) => {
+  if (newValue) {
+    // When opening, sync with current store filters
+    tempFilters.value = {
+      search: filters.value.search,
+      category: filters.value.category,
+      sort: filters.value.sort
+    }
+  }
+})
+
+// Function to apply filters
+const applyFilters = () => {
+  console.log('Applying filters:', tempFilters.value)
+  store.setFilters({
+    search: tempFilters.value.search,
+    category: tempFilters.value.category,
+    sort: tempFilters.value.sort
+  })
+  isFilterOpen.value = false
+}
+
+// Reset filters
+const resetAllFilters = () => {
+  tempFilters.value = {
+    search: '',
+    category: null,
+    sort: 'created_at'
+  }
+  store.resetFilters()
+  isFilterOpen.value = false
+}
 
 useHead({
   title: 'محصولات - فروشگاه لوازم آرایشی',
@@ -100,22 +145,8 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen font-vazir">
-    <div class="w-full">
-      <!-- Page Header -->
-      <div 
-        class="text-center mb-12 py-12 bg-gray-50"
-        v-motion
-        :initial="{ opacity: 0, y: -50 }"
-        :enter="{ opacity: 1, y: 0 }"
-        :delay="100"
-      >
-        <h1 class="text-3xl font-bold text-gray-900 mb-4">محصولات هلمیز</h1>
-        <p class="text-lg text-gray-600">
-          مجموعه کامل محصولات آرایشی و بهداشتی با کیفیت
-        </p>
-      </div>
-
+  <div class="min-h-screen bg-gray-50 font-vazir">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Loading State -->
       <div v-if="loading && !products.length" class="flex justify-center items-center min-h-[400px]">
         <div class="text-center">
@@ -127,105 +158,224 @@ useHead({
       <!-- Error State -->
       <div v-else-if="error" class="flex justify-center items-center min-h-[400px]">
         <div class="text-center text-red-600">
-          <p class="text-xl mb-2">خطا در بارگذاری محصولات</p>
-          <p class="text-sm">لطفاً دوباره تلاش کنید</p>
+          <p class="text-xl mb-2">{{ error }}</p>
+          <button 
+            @click="store.fetchProducts()"
+            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            تلاش مجدد
+          </button>
         </div>
       </div>
 
       <template v-else>
-        <!-- Filters Section -->
-        <div 
-          class="mb-8 bg-white shadow-sm p-6"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
+        <!-- Filter Toggle Button -->
+        <button
+          @click="isFilterOpen = !isFilterOpen"
+          class="w-full mb-4 flex items-center justify-between px-6 py-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
+          :initial="{ opacity: 0, y: -20 }"
           :enter="{ opacity: 1, y: 0 }"
-          :delay="300"
+          :delay="200"
         >
-          <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="relative">
-              <label class="block text-sm font-medium text-gray-700 mb-2">جستجو</label>
-              <input
-                v-model="filters.search"
-                type="text"
-                placeholder="نام محصول را وارد کنید..."
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                @input="(e) => store.setSearch((e.target as HTMLInputElement).value)"
-              />
-            </div>
+          <span class="text-lg font-medium text-gray-900">فیلترها</span>
+          <svg
+            class="w-5 h-5 transform transition-transform duration-300"
+            :class="{ 'rotate-180': isFilterOpen }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">دسته‌بندی</label>
-              <select
-                v-model="filters.category"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                @change="(e) => store.setCategory((e.target as HTMLSelectElement).value ? Number((e.target as HTMLSelectElement).value) : null)"
-              >
-                <option :value="null">همه دسته‌بندی‌ها</option>
-                <option
-                  v-for="category in categories"
-                  :key="category.id"
-                  :value="category.id"
+        <!-- Filters Panel -->
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="transform -translate-y-2 opacity-0"
+          enter-to-class="transform translate-y-0 opacity-100"
+          leave-active-class="transition duration-200 ease-in"
+          leave-from-class="transform translate-y-0 opacity-100"
+          leave-to-class="transform -translate-y-2 opacity-0"
+        >
+          <div v-show="isFilterOpen" class="mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+              <!-- Search Filter -->
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">جستجو در محصولات</label>
+                <div class="relative">
+                  <input
+                    v-model="tempFilters.search"
+                    type="text"
+                    placeholder="نام محصول را وارد کنید..."
+                    class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                  />
+                  <svg
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Categories Filter -->
+              <Disclosure v-slot="{ open }" defaultOpen>
+                <DisclosureButton class="flex w-full justify-between items-center text-right">
+                  <span class="text-sm font-medium text-gray-700">دسته‌بندی‌ها</span>
+                  <svg
+                    class="w-5 h-5 transform transition-transform duration-300"
+                    :class="{ 'rotate-180': open }"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </DisclosureButton>
+
+                <DisclosurePanel class="mt-4">
+                  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <button
+                      v-for="category in categories"
+                      :key="category.id"
+                      @click="tempFilters.category = category.id"
+                      class="px-4 py-2 rounded-lg text-sm transition-all duration-300"
+                      :class="[
+                        tempFilters.category === category.id
+                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ]"
+                    >
+                      {{ category.name }}
+                    </button>
+                  </div>
+                </DisclosurePanel>
+              </Disclosure>
+
+              <!-- Sort Filter -->
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">مرتب‌سازی</label>
+                <select
+                  v-model="tempFilters.sort"
+                  class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
                 >
-                  {{ category.name }}
-                </option>
-              </select>
-            </div>
+                  <option value="created_at">جدیدترین</option>
+                  <option value="price">قیمت</option>
+                  <option value="name">نام</option>
+                </select>
+              </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">مرتب‌سازی</label>
-              <select
-                v-model="filters.sort"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                @change="(e) => store.setSort((e.target as HTMLSelectElement).value)"
-              >
-                <option value="created_at">جدیدترین</option>
-                <option value="price">قیمت</option>
-                <option value="name">نام</option>
-              </select>
+              <!-- Filter Actions -->
+              <div class="flex items-center justify-between pt-4 border-t">
+                <button
+                  @click="resetAllFilters"
+                  class="text-sm text-red-600 hover:text-red-800 transition-colors flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  پاک کردن فیلترها
+                </button>
+
+                <button
+                  @click="() => {
+                    applyFilters();
+                    isFilterOpen = false;
+                  }"
+                  class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  اعمال فیلترها
+                </button>
+              </div>
             </div>
           </div>
-
-          <!-- Active Filters -->
-          <div v-if="store.hasFiltersApplied" class="mt-6 flex items-center gap-4 max-w-7xl mx-auto">
-            <span class="text-sm text-gray-500">فیلترهای فعال:</span>
-            <button
-              @click="store.resetFilters()"
-              class="text-sm text-red-600 hover:text-red-800 transition-colors"
-            >
-              پاک کردن همه فیلترها
-            </button>
-          </div>
-        </div>
+        </Transition>
 
         <!-- Products Grid -->
-        <div v-if="products.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0">
+        <div v-if="products.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div
             v-for="(product, index) in products"
             :key="product.id"
-            class="group relative border-b border-r border-gray-100"
-            v-motion
-            :initial="productCardVariants.initial"
+            class="group bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
+            :initial="motionVariants.initial"
             :enter="getProductDelay(index)"
-            :visible="{ once: true } as any"
+            :visible="motionVariants.visible"
           >
-            <!-- Product Name Header - Always Visible -->
-            <div class="p-6 text-right">
-              <h3 
-                class="text-xl font-bold text-gray-900"
-                v-motion
-                :initial="{ opacity: 0, x: -20 }"
-                :enter="{ opacity: 1, x: 0 }"
-                :delay="index * 100 + 200"
+            <!-- Product Image Container -->
+            <div class="relative">
+              <!-- Product Link -->
+              <NuxtLink
+                :to="`/products/${product.id}`"
+                class="block relative overflow-hidden cursor-pointer"
               >
-                {{ product.name }}
-              </h3>
-              <div 
-                class="mt-2 flex justify-between items-center"
-                v-motion
-                :initial="{ opacity: 0 }"
-                :enter="{ opacity: 1 }"
-                :delay="index * 100 + 300"
+                <Transition
+                  mode="out-in"
+                  enter-active-class="transition-opacity duration-300"
+                  enter-from-class="opacity-0"
+                  enter-to-class="opacity-100"
+                  leave-active-class="transition-opacity duration-300"
+                  leave-from-class="opacity-100"
+                  leave-to-class="opacity-0"
+                >
+                  <div class="relative aspect-[4/5] w-full">
+                    <img
+                      v-if="product.media?.length"
+                      :key="currentImageIndexes[product.id] || 0"
+                      :src="product.media[currentImageIndexes[product.id] || 0]?.url || product.media[0].url"
+                      :alt="product.name"
+                      class="h-full w-full object-cover object-center"
+                    />
+                    <div v-else class="h-full w-full bg-gray-200 flex items-center justify-center">
+                      <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                </Transition>
+              </NuxtLink>
+
+              <!-- Image Navigation Overlay -->
+              <div
+                v-if="product.media?.length > 1"
+                class="absolute inset-0 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200"
               >
+                <!-- Previous Button -->
+                <button
+                  @click.stop="prevImage(product.id, product.media.length)"
+                  class="z-20 p-2 mx-2 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white transition-colors shadow-lg transform hover:scale-105 hover:bg-blue-50"
+                >
+                  <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <!-- Next Button -->
+                <button
+                  @click.stop="nextImage(product.id, product.media.length)"
+                  class="z-20 p-2 mx-2 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white transition-colors shadow-lg transform hover:scale-105 hover:bg-blue-50"
+                >
+                  <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <!-- Image Counter -->
+                <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm z-20">
+                  {{ (currentImageIndexes[product.id] || 0) + 1 }} / {{ product.media.length }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="p-4">
+              <h3 class="text-lg font-bold text-gray-900">{{ product.name }}</h3>
+              <div class="mt-2 flex justify-between items-center">
                 <span
                   :class="[
                     'inline-block px-3 py-1 text-sm rounded-full',
@@ -239,83 +389,16 @@ useHead({
                 <p class="text-lg font-bold text-gray-900">{{ formatPrice(product.price) }}</p>
               </div>
             </div>
-
-            <!-- Product Image and Hover Content -->
-            <NuxtLink
-              :to="`/products/${product.id}`"
-              class="block relative overflow-hidden"
-            >
-              <div class="relative aspect-[4/5] w-full">
-                <!-- Product Images -->
-                <div 
-                  class="relative w-full h-full"
-                  v-motion
-                  :initial="imageHoverVariants.initial"
-                  :hover="imageHoverVariants.hover"
-                >
-                  <img
-                    v-if="product.media?.length"
-                    :src="product.media[currentImageIndexes[product.id] || 0]?.url || product.media[0].url"
-                    :alt="product.name"
-                    class="h-full w-full object-cover object-center transition-all duration-300"
-                  />
-                  <div v-else class="h-full w-full bg-gray-200 flex items-center justify-center">
-                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- Navigation Arrows -->
-                <div 
-                  v-if="product.media?.length > 1" 
-                  class="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-all duration-300"
-                  v-motion
-                  :initial="{ opacity: 0 }"
-                  :hover="{ opacity: 1 }"
-                >
-                  <button 
-                    class="bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors z-10"
-                    @click.prevent="nextImage(product.id, product.media.length)"
-                  >
-                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button 
-                    class="bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors z-10"
-                    @click.prevent="prevImage(product.id, product.media.length)"
-                  >
-                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-
-                <!-- Hover Info -->
-                <div 
-                  class="absolute inset-0 bg-white/90 backdrop-blur-sm p-6 opacity-0 group-hover:opacity-100 transition-all duration-300 text-right"
-                  v-motion
-                  :initial="{ opacity: 0, y: 20 }"
-                  :hover="{ opacity: 1, y: 0 }"
-                >
-                  <div class="flex flex-col gap-3">
-                    <p class="text-sm text-gray-600">{{ product.category?.name }}</p>
-                    <div class="mt-auto">
-                      <p v-if="product.compare_at_price" class="text-sm text-gray-500 line-through mb-1">
-                        {{ formatPrice(product.compare_at_price) }}
-                      </p>
-                      <p class="text-lg font-bold text-blue-600">مشاهده جزئیات محصول</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </NuxtLink>
           </div>
         </div>
 
         <!-- No Products Found -->
-        <div v-else class="bg-white shadow-sm p-12 text-center max-w-7xl mx-auto">
+        <div
+          v-else
+          class="bg-white shadow-sm p-12 text-center rounded-lg"
+          :initial="{ opacity: 0, scale: 0.9 }"
+          :enter="{ opacity: 1, scale: 1 }"
+        >
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -324,7 +407,13 @@ useHead({
         </div>
 
         <!-- Pagination -->
-        <div v-if="pagination.totalPages > 1" class="mt-8 flex justify-center gap-2">
+        <div
+          v-if="pagination.totalPages > 1"
+          class="mt-8 flex justify-center gap-2"
+          :initial="{ opacity: 0, y: 20 }"
+          :enter="{ opacity: 1, y: 0 }"
+          :delay="500"
+        >
           <button
             v-for="page in pagination.totalPages"
             :key="page"
@@ -369,20 +458,12 @@ img {
   -webkit-user-drag: none;
 }
 
-/* Add smooth image transitions */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+/* Add hover effects */
+.hover-scale {
+  transition: transform 0.3s ease;
 }
 
-/* Smooth transitions for all animated elements */
-.v-motion {
-  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Add a nice shadow effect on hover */
-.group:hover {
-  z-index: 10;
+.hover-scale:hover {
+  transform: scale(1.02);
 }
 </style> 

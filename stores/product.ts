@@ -13,6 +13,11 @@ interface ProductState {
     search: string
     sort: string
     order: 'asc' | 'desc'
+    priceRange: {
+      min: number | null
+      max: number | null
+    }
+    inStock: boolean
   }
   pagination: {
     currentPage: number
@@ -33,7 +38,12 @@ export const useProductStore = defineStore('product', {
       category: null,
       search: '',
       sort: 'created_at',
-      order: 'desc'
+      order: 'desc',
+      priceRange: {
+        min: null,
+        max: null
+      },
+      inStock: false
     },
     pagination: {
       currentPage: 1,
@@ -48,7 +58,8 @@ export const useProductStore = defineStore('product', {
       this.loading = true
       this.error = null
       try {
-        let queryParams: Record<string, string> = {
+        console.log('Fetching products with filters:', this.filters)
+        const queryParams: Record<string, string> = {
           page: this.pagination.currentPage.toString()
         }
 
@@ -56,19 +67,24 @@ export const useProductStore = defineStore('product', {
         queryParams.sort = `${this.filters.order === 'desc' ? '-' : ''}${this.filters.sort}`
 
         // Add category filter
-        if (this.filters.category) {
+        if (this.filters.category !== null) {
           queryParams['filter[category]'] = this.filters.category.toString()
         }
 
         // Add search filter
-        if (this.filters.search) {
-          queryParams['filter[name]'] = this.filters.search
+        if (this.filters.search && this.filters.search.trim()) {
+          queryParams['filter[name]'] = this.filters.search.trim()
         }
 
+        console.log('API query params:', queryParams)
+
         const response = await api.getProducts(queryParams)
-        this.products = response.data
         
-        // Update pagination info if available in response meta
+        if ('data' in response) {
+          this.products = response.data
+          console.log('Received products:', response.data.length)
+        }
+        
         if ('meta' in response) {
           const meta = response.meta as { total: number; per_page: number }
           this.pagination.totalItems = meta.total
@@ -76,14 +92,14 @@ export const useProductStore = defineStore('product', {
           this.pagination.totalPages = Math.ceil(meta.total / meta.per_page)
         }
       } catch (err) {
-        this.error = err instanceof Error ? err.message : 'خطا در دریافت محصولات'
         console.error('Error fetching products:', err)
+        this.error = err instanceof Error ? err.message : 'خطا در دریافت محصولات'
       } finally {
         this.loading = false
       }
     },
 
-    async fetchProduct(id: string | number) {
+    async fetchProduct(id: string) {
       this.loading = true
       this.error = null
       try {
@@ -106,26 +122,33 @@ export const useProductStore = defineStore('product', {
       }
     },
 
-    // Filter actions
+    setSearch(search: string) {
+      this.filters.search = search
+      this.pagination.currentPage = 1
+      this.fetchProducts()
+    },
+
     setCategory(categoryId: number | null) {
       this.filters.category = categoryId
       this.pagination.currentPage = 1
       this.fetchProducts()
     },
 
-    setSearch(query: string) {
-      this.filters.search = query
+    setSort(sort: string) {
+      this.filters.sort = sort
       this.pagination.currentPage = 1
       this.fetchProducts()
     },
 
-    setSort(sort: string) {
-      this.filters.sort = sort
+    setPriceRange(min: number | null, max: number | null) {
+      this.filters.priceRange = { min, max }
+      this.pagination.currentPage = 1
       this.fetchProducts()
     },
 
-    setSortOrder(order: 'asc' | 'desc') {
-      this.filters.order = order
+    toggleInStock() {
+      this.filters.inStock = !this.filters.inStock
+      this.pagination.currentPage = 1
       this.fetchProducts()
     },
 
@@ -134,12 +157,35 @@ export const useProductStore = defineStore('product', {
       this.fetchProducts()
     },
 
+    setFilters(newFilters: { search?: string; category?: number | null; sort?: string }) {
+      console.log('Setting new filters:', newFilters)
+      
+      if (typeof newFilters.search !== 'undefined') {
+        this.filters.search = newFilters.search
+      }
+      if (typeof newFilters.category !== 'undefined') {
+        this.filters.category = newFilters.category
+      }
+      if (typeof newFilters.sort !== 'undefined') {
+        this.filters.sort = newFilters.sort
+      }
+
+      this.pagination.currentPage = 1
+      this.fetchProducts()
+    },
+
     resetFilters() {
+      console.log('Resetting filters')
       this.filters = {
         category: null,
         search: '',
         sort: 'created_at',
-        order: 'desc'
+        order: 'desc',
+        priceRange: {
+          min: null,
+          max: null
+        },
+        inStock: false
       }
       this.pagination.currentPage = 1
       this.fetchProducts()
@@ -155,7 +201,10 @@ export const useProductStore = defineStore('product', {
       return state.filters.category !== null || 
              state.filters.search !== '' || 
              state.filters.sort !== 'created_at' ||
-             state.filters.order !== 'desc'
+             state.filters.order !== 'desc' ||
+             state.filters.priceRange.min !== null ||
+             state.filters.priceRange.max !== null ||
+             state.filters.inStock
     }
   }
 }) 

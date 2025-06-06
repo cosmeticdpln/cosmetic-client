@@ -6,6 +6,7 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@nuxt/image',
     '@pinia/nuxt',
+    '@vueuse/motion/nuxt'
   ],
   
   runtimeConfig: {
@@ -21,6 +22,12 @@ export default defineNuxtConfig({
         changeOrigin: true,
         prependPath: true
       }
+    }
+  },
+
+  motion: {
+    directives: {
+      'motion': true
     }
   },
 
