@@ -41,12 +41,22 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </button>
-            <button class="text-gray-600 hover:text-blue-900 transition-colors">
-              <span class="sr-only">حساب کاربری</span>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
+            <div>
+              <button v-if="!userName" @click="showLogin = true" class="text-gray-600 hover:text-blue-900 transition-colors flex items-center">
+                <span class="sr-only">ورود</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="ml-2">ورود</span>
+              </button>
+              <div v-else class="flex items-center space-x-2 space-x-reverse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="font-bold text-blue-900">{{ userName }}</span>
+                <button @click="handleLogout" class="text-xs text-gray-500 hover:text-red-600 ml-2">خروج</button>
+              </div>
+            </div>
           </div>
         </div>
       </nav>
@@ -110,16 +120,21 @@
         </div>
       </div>
     </footer>
+
+    <LoginModal v-if="showLogin" @close="showLogin = false" @success="handleLoginSuccess" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import LoginModal from '~/components/LoginModal.vue'
 
 const route = useRoute()
 const isHome = computed(() => route.path === '/')
 const isScrolled = ref(false)
+const showLogin = ref(false)
+const userName = ref('')
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 100
@@ -129,6 +144,8 @@ onMounted(() => {
   if (isHome.value) {
     window.addEventListener('scroll', handleScroll)
   }
+  // Load user name from localStorage
+  userName.value = localStorage.getItem('user_name') || ''
 })
 
 onUnmounted(() => {
@@ -136,6 +153,22 @@ onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll)
   }
 })
+
+function handleLoginSuccess(data: any) {
+  if (data && data.access_token) {
+    localStorage.setItem('access_token', data.access_token)
+    if (data.user && data.user.name) {
+      localStorage.setItem('user_name', data.user.name)
+      userName.value = data.user.name
+    }
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user_name')
+  userName.value = ''
+}
 
 useHead({
   htmlAttrs: {
