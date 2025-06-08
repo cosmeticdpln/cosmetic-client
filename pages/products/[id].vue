@@ -66,6 +66,16 @@ const handleScroll = () => {
 
 onMounted(async () => {
   await store.fetchProduct(route.params.id as string)
+  // Map type to specification_type for compatibility
+  if (store.currentProduct && Array.isArray(store.currentProduct.specifications)) {
+    store.currentProduct.specifications = store.currentProduct.specifications.map(spec => {
+      const s = spec as any
+      if (s.type && !s.specification_type) {
+        s.specification_type = s.type
+      }
+      return s
+    })
+  }
   window.addEventListener('scroll', handleScroll)
 })
 
@@ -133,7 +143,7 @@ useHead(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-vazir">
+  <div class="w-[80vw] max-w-[90vw] mx-auto px-4 sm:px-6 lg:px-8 py-8 font-vazir">
     <!-- Loading -->
     <div v-if="store.loading" class="flex justify-center items-center min-h-[400px]">
       <div class="text-center">
@@ -158,9 +168,9 @@ useHead(() => {
     ></div>
 
     <!-- Product Content -->
-    <div v-if="store.currentProduct" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <!-- Left: Product Images -->
-      <div>
+    <div v-if="store.currentProduct" class="flex flex-col lg:flex-row gap-0 justify-between items-stretch w-full">
+      <!-- Column 1: Product Images -->
+      <div class="w-full lg:w-[35%] min-w-[300px]">
         <div class="space-y-6">
           <!-- Main Image -->
           <div
@@ -210,65 +220,73 @@ useHead(() => {
         </div>
       </div>
 
-      <!-- Right: Product Info -->
-      <div class="space-y-6">
-        <!-- Title Section -->
-        <div class="border-b border-gray-200 pb-6">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
-          <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
-        </div>
+      <!-- Column 2: Shopping Cart -->
+      <div class="w-full lg:w-[20%] min-w-[220px] max-w-[320px]">
+        <div class="space-y-6">
+          <!-- Title Section -->
+          <div class="border-b border-gray-200 pb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
+            <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
+          </div>
 
-        <!-- Shopping Cart Section -->
-        <div id="shopping-cart" class="bg-white rounded-lg shadow-sm p-6">
-          <div class="space-y-4">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-600">قیمت:</span>
-              <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
+          <!-- Shopping Cart Section -->
+          <div id="shopping-cart" class="bg-white rounded-lg shadow-sm p-6">
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">قیمت:</span>
+                <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
+              </div>
+              <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
+                <span class="text-gray-600">قیمت قبلی:</span>
+                <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">وضعیت:</span>
+                <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
+                  {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
+                </span>
+              </div>
+              <button
+                  class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  :disabled="(store.currentProduct?.stock ?? 0) <= 0"
+              >
+                افزودن به سبد خرید
+              </button>
             </div>
-            <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
-              <span class="text-gray-600">قیمت قبلی:</span>
-              <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-600">وضعیت:</span>
-              <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
-                {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
-              </span>
-            </div>
-            <button
-                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                :disabled="(store.currentProduct?.stock ?? 0) <= 0"
-            >
-              افزودن به سبد خرید
-            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Product Specifications -->
-        <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-4">مشخصات محصول</h2>
-          <div class="space-y-4">
-            <div v-for="spec in store.currentProduct.specifications" :key="spec.id" class="bg-gray-50 rounded-lg p-4">
-              <div class="font-medium text-gray-900 mb-2">{{ spec.type.group.name }}</div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">{{ spec.type.name }}:</span>
-                <span class="text-gray-900">
-                  {{ Array.isArray(spec.value) ? spec.value.join('، ') : spec.value }}
-                </span>
+      <!-- Column 3: Product Specifications -->
+      <div class="w-full lg:w-[35%] min-w-[300px]">
+        <div class="space-y-6">
+          <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">مشخصات محصول</h2>
+            <div class="space-y-4">
+              <div v-for="spec in store.currentProduct.specifications" :key="spec.id" class="bg-gray-50 rounded-lg p-4">
+                <div v-if="spec.specification_type && spec.specification_type.group" class="font-medium text-gray-900 mb-2">
+                  {{ spec.specification_type.group.name }}
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">{{ spec.specification_type?.name || '---' }}:</span>
+                  <span class="text-gray-900">
+                    {{ Array.isArray(spec.value) ? spec.value.join('، ') : spec.value }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Tags -->
-        <div v-if="store.currentProduct.tags?.length" class="flex flex-wrap gap-2">
-          <span
-            v-for="tag in store.currentProduct.tags"
-            :key="tag.id"
-            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-          >
-            {{ tag.name }}
-          </span>
+          <!-- Tags -->
+          <div v-if="store.currentProduct.tags?.length" class="flex flex-wrap gap-2">
+            <span
+              v-for="tag in store.currentProduct.tags"
+              :key="tag.id"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+            >
+              {{ tag.name }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
