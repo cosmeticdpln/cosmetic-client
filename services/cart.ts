@@ -1,29 +1,65 @@
 import { ref } from 'vue'
 
-export interface CartItem {
+interface ProductMedia {
+  id: number
+  original_url: string
+  preview_url: string
+}
+
+interface Product {
   id: number
   name: string
-  price: number
+  slug: string
+  price: string
+  media: ProductMedia[]
+}
+
+export interface CartItem {
+  id: number
+  order_id: number
+  product_id: number
+  product_name: string
+  product_price: number
   quantity: number
-  image: string
+  total: number
+  product: Product
 }
 
 export interface Cart {
-  items: CartItem[]
-  total: number
+  id: number
+  user_id: number
+  status: string
+  coupon_id: number | null
+  subtotal: number
   discount: number
-  finalTotal: number
-  coupon?: {
+  total: number
+  shipping_amount: number
+  paid_at: string | null
+  meta: any
+  created_at: string
+  updated_at: string
+  items: CartItem[]
+  coupon: {
     code: string
     discount: number
-  }
+  } | null
 }
 
 const cart = ref<Cart>({
-  items: [],
-  total: 0,
+  id: 0,
+  user_id: 0,
+  status: 'cart',
+  coupon_id: null,
+  subtotal: 0,
   discount: 0,
-  finalTotal: 0
+  total: 0,
+  shipping_amount: 0,
+  paid_at: null,
+  meta: null,
+  created_at: '',
+  updated_at: '',
+  items: [],
+  coupon: null
 })
 
 export function useCart() {

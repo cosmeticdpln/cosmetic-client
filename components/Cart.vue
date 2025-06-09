@@ -17,17 +17,17 @@
 
       <div v-else class="space-y-4">
         <div v-for="item in cart.items" :key="item.id" class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-          <img :src="item.image" :alt="item.name" class="w-20 h-20 object-cover rounded-lg">
+          <img :src="getProductImage(item)" :alt="item.product_name" class="w-20 h-20 object-cover rounded-lg">
           <div class="flex-1">
-            <h3 class="font-medium text-gray-800">{{ item.name }}</h3>
+            <h3 class="font-medium text-gray-800">{{ item.product_name }}</h3>
             <div class="flex items-center gap-2 mt-1">
-              <span class="text-gray-600">{{ formatPrice(item.price) }} تومان</span>
+              <span class="text-gray-600">{{ formatPrice(item.product_price) }} تومان</span>
               <span class="text-gray-400">×</span>
               <span class="text-gray-600">{{ item.quantity }}</span>
             </div>
           </div>
           <button 
-            @click="removeFromCart(item.id)"
+            @click="removeFromCart(item.product_id)"
             class="text-red-500 hover:text-red-600 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -71,7 +71,7 @@
         <div class="border-t pt-4 mt-4 space-y-2">
           <div class="flex justify-between text-gray-600">
             <span>جمع کل:</span>
-            <span>{{ formatPrice(cart.total) }} تومان</span>
+            <span>{{ formatPrice(cart.subtotal) }} تومان</span>
           </div>
           <div v-if="cart.discount > 0" class="flex justify-between text-green-600">
             <span>تخفیف:</span>
@@ -79,7 +79,7 @@
           </div>
           <div class="flex justify-between text-lg font-bold text-gray-800">
             <span>مبلغ قابل پرداخت:</span>
-            <span>{{ formatPrice(cart.finalTotal) }} تومان</span>
+            <span>{{ formatPrice(cart.total) }} تومان</span>
           </div>
         </div>
 
@@ -122,5 +122,12 @@ const handleCheckout = () => {
 const formatPrice = (price: number | undefined) => {
   if (price === undefined || price === null) return '0'
   return price.toLocaleString('fa-IR')
+}
+
+const getProductImage = (item: any) => {
+  if (item.product?.media?.length > 0) {
+    return item.product.media[0].original_url
+  }
+  return '/images/placeholder.jpg'
 }
 </script> 
