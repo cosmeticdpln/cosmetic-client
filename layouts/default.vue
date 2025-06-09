@@ -1,3 +1,56 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import LoginModal from '~/components/LoginModal.vue'
+
+const route = useRoute()
+const isHome = computed(() => route.path === '/')
+const isScrolled = ref(false)
+const showLogin = ref(false)
+const userName = ref('')
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 100
+}
+
+onMounted(() => {
+  if (isHome.value) {
+    window.addEventListener('scroll', handleScroll)
+  }
+  // Load user name from localStorage
+  userName.value = localStorage.getItem('user_name') || ''
+})
+
+onUnmounted(() => {
+  if (isHome.value) {
+    window.removeEventListener('scroll', handleScroll)
+  }
+})
+
+function handleLoginSuccess(data: any) {
+  if (data && data.access_token) {
+    localStorage.setItem('access_token', data.access_token)
+    if (data.user && data.user.name) {
+      localStorage.setItem('user_name', data.user.name)
+      userName.value = data.user.name
+    }
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user_name')
+  userName.value = ''
+}
+
+useHead({
+  htmlAttrs: {
+    dir: 'rtl',
+    lang: 'fa'
+  }
+})
+</script>
+
 <template>
   <div class="min-h-screen flex flex-col font-vazir">
     <!-- Header -->
@@ -126,59 +179,6 @@
     <LoginModal v-if="showLogin" @close="showLogin = false" @success="handleLoginSuccess" />
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import LoginModal from '~/components/LoginModal.vue'
-
-const route = useRoute()
-const isHome = computed(() => route.path === '/')
-const isScrolled = ref(false)
-const showLogin = ref(false)
-const userName = ref('')
-
-const handleScroll = () => {
-  isScrolled.value = window.scrollY > 100
-}
-
-onMounted(() => {
-  if (isHome.value) {
-    window.addEventListener('scroll', handleScroll)
-  }
-  // Load user name from localStorage
-  userName.value = localStorage.getItem('user_name') || ''
-})
-
-onUnmounted(() => {
-  if (isHome.value) {
-    window.removeEventListener('scroll', handleScroll)
-  }
-})
-
-function handleLoginSuccess(data: any) {
-  if (data && data.access_token) {
-    localStorage.setItem('access_token', data.access_token)
-    if (data.user && data.user.name) {
-      localStorage.setItem('user_name', data.user.name)
-      userName.value = data.user.name
-    }
-  }
-}
-
-function handleLogout() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('user_name')
-  userName.value = ''
-}
-
-useHead({
-  htmlAttrs: {
-    dir: 'rtl',
-    lang: 'fa'
-  }
-})
-</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap');
