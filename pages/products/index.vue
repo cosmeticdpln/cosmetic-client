@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import { useMotion } from '@vueuse/motion'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import type { SpecificationType } from '~/types'
+import AddToCartButton from '~/components/AddToCartButton.vue'
 
 const store = useProductStore()
 const isFilterOpen = ref(false)
@@ -474,6 +475,12 @@ useHead({
                       {{ product.stock > 0 ? `موجودی: ${product.stock}` : 'ناموجود' }}
                     </span>
                     <p class="text-lg font-bold text-gray-900">{{ formatPrice(product.price) }}</p>
+                  </div>
+                  <div class="mt-4">
+                    <AddToCartButton
+                      :product-id="product.id"
+                      class="w-full"
+                    />
                   </div>
                 </div>
               </div>

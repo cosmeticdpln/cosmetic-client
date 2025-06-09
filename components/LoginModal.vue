@@ -112,6 +112,9 @@ async function verifyCode() {
     const data = await res.json()
     user.value = data.user
     accessToken.value = data.access_token
+    if (process.client) {
+      localStorage.setItem('access_token', data.access_token)
+    }
     if (!user.value.name || user.value.name.startsWith('User_')) {
       step.value = 3
       successMsg.value = ''

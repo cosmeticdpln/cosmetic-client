@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useHead, useRoute } from '#imports'
 import { useProductStore } from '~/stores/product'
+import AddToCartButton from '~/components/AddToCartButton.vue'
 
 const route = useRoute()
 const store = useProductStore()
@@ -246,12 +247,10 @@ useHead(() => {
                   {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
                 </span>
               </div>
-              <button
-                  class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                  :disabled="(store.currentProduct?.stock ?? 0) <= 0"
-              >
-                افزودن به سبد خرید
-              </button>
+              <AddToCartButton
+                  :product-id="store.currentProduct.id"
+                  class="w-full"
+              />
             </div>
           </div>
         </div>
@@ -326,12 +325,10 @@ useHead(() => {
                 {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
               </span>
             </div>
-            <button
-                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                :disabled="(store.currentProduct?.stock ?? 0) <= 0"
-            >
-              افزودن به سبد خرید
-            </button>
+            <AddToCartButton
+                :product-id="store.currentProduct.id"
+                class="w-full"
+            />
           </div>
         </div>
       </div>
