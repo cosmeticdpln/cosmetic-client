@@ -25,6 +25,11 @@
               <span class="text-gray-400">×</span>
               <span class="text-gray-600">{{ item.quantity }}</span>
             </div>
+            <div v-if="item.discount > 0" class="mt-1">
+              <span class="text-green-600">تخفیف: {{ formatPrice(item.discount) }} تومان</span>
+              <span class="text-gray-400 mx-2">|</span>
+              <span class="text-gray-800">قیمت نهایی: {{ formatPrice(item.final_price) }} تومان</span>
+            </div>
           </div>
           <button 
             @click="removeFromCart(item.product_id)"
@@ -56,13 +61,20 @@
               type="text"
               placeholder="کد تخفیف"
               class="flex-1 border-2 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :disabled="applyingCoupon"
             />
             <button
               @click="handleApplyCoupon"
-              class="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition-colors"
-              :disabled="!couponCode"
+              class="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px] flex items-center justify-center"
+              :disabled="!couponCode || applyingCoupon"
             >
-              اعمال
+              <span v-if="applyingCoupon" class="animate-spin mr-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              </span>
+              <span v-else>اعمال</span>
             </button>
           </div>
         </div>
@@ -104,6 +116,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const { cart, loading, error, fetchCart, removeFromCart, applyCoupon, removeCoupon } = useCart()
 const couponCode = ref('')
+const applyingCoupon = ref(false)
 
 onMounted(() => {
   fetchCart()
@@ -111,8 +124,13 @@ onMounted(() => {
 
 const handleApplyCoupon = async () => {
   if (!couponCode.value) return
-  await applyCoupon(couponCode.value)
-  couponCode.value = ''
+  applyingCoupon.value = true
+  try {
+    await applyCoupon(couponCode.value)
+    couponCode.value = ''
+  } finally {
+    applyingCoupon.value = false
+  }
 }
 
 const handleCheckout = () => {

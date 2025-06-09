@@ -1,5 +1,7 @@
 import { ref } from 'vue'
 
+const API_BASE_URL = 'http://localhost:8000/api/v1'
+
 interface ProductMedia {
   id: number
   original_url: string
@@ -22,6 +24,8 @@ export interface CartItem {
   product_price: number
   quantity: number
   total: number
+  discount: number
+  final_price: number
   product: Product
 }
 
@@ -73,14 +77,26 @@ export function useCart() {
     return null
   }
 
+  const getHeaders = () => {
+    return {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type': 'application/json',
+      'Referer': 'http://localhost:3000/',
+      'Sec-Ch-Ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Linux"',
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    }
+  }
+
   async function fetchCart() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:8000/api/v1/orders/cart', {
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        }
+      const response = await fetch(`${API_BASE_URL}/orders/cart`, {
+        method: 'GET',
+        headers: getHeaders()
       })
       if (!response.ok) throw new Error('Failed to fetch cart')
       const data = await response.json()
@@ -96,12 +112,9 @@ export function useCart() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:8000/api/v1/orders/cart/add', {
+      const response = await fetch(`${API_BASE_URL}/orders/cart/add`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ product_id: productId, quantity })
       })
       if (!response.ok) throw new Error('Failed to add item to cart')
@@ -117,12 +130,9 @@ export function useCart() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:8000/api/v1/orders/cart/remove', {
+      const response = await fetch(`${API_BASE_URL}/orders/cart/remove`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ product_id: productId })
       })
       if (!response.ok) throw new Error('Failed to remove item from cart')
@@ -138,18 +148,29 @@ export function useCart() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:8000/api/v1/orders/cart/coupon', {
+      console.log('Applying coupon to:', `${API_BASE_URL}/orders/cart/coupon`)
+      const response = await fetch(`${API_BASE_URL}/orders/cart/coupon`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
-        body: JSON.stringify({ code })
+        headers: getHeaders(),
+        body: JSON.stringify({ coupon_code: code })
       })
-      if (!response.ok) throw new Error('Failed to apply coupon')
+      
+      if (response.redirected) {
+        throw new Error('Session expired. Please login again.')
+      }
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to apply coupon')
+      }
+      
       await fetchCart()
     } catch (e: any) {
       error.value = e.message
+      if (e.message === 'Session expired. Please login again.') {
+        // Redirect to login page
+        window.location.href = '/login'
+      }
     } finally {
       loading.value = false
     }
@@ -159,11 +180,9 @@ export function useCart() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:8000/api/v1/orders/cart/remove-coupon', {
+      const response = await fetch(`${API_BASE_URL}/orders/cart/remove-coupon`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        }
+        headers: getHeaders()
       })
       if (!response.ok) throw new Error('Failed to remove coupon')
       await fetchCart()
