@@ -12,12 +12,19 @@ onMounted(() => {
 definePageMeta({
   middleware: ['auth']
 })
+
+useHead({
+  htmlAttrs: {
+    dir: 'rtl',
+    lang: 'fa'
+  }
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-8">
+  <div class="min-h-screen bg-gray-50 py-8" dir="rtl">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-8">سبد خرید</h1>
+      <h1 class="text-3xl font-bold text-gray-900 mb-8 text-right">سبد خرید</h1>
       
       <div v-if="loading" class="flex justify-center items-center min-h-[400px]">
         <div class="text-center">
@@ -26,7 +33,7 @@ definePageMeta({
         </div>
       </div>
 
-      <div v-else-if="error" class="bg-red-50 text-red-600 p-4 rounded-xl mb-4">
+      <div v-else-if="error" class="bg-red-50 text-red-600 p-4 rounded-xl mb-4 text-right">
         {{ error }}
       </div>
 
@@ -35,4 +42,11 @@ definePageMeta({
       </div>
     </div>
   </div>
-</template> 
+</template>
+
+<style scoped>
+/* Add RTL specific styles */
+[dir="rtl"] {
+  text-align: right;
+}
+</style> 

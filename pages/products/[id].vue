@@ -51,21 +51,6 @@ const zoomBackgroundStyle = computed(() => {
   }
 })
 
-// Add scroll handling for shopping cart
-const handleScroll = () => {
-  const cart = document.getElementById('shopping-cart')
-  if (!cart) return
-
-  const cartRect = cart.getBoundingClientRect()
-  const shouldStick = window.scrollY > cartRect.top
-
-  if (shouldStick) {
-    cart.classList.add('sticky')
-  } else {
-    cart.classList.remove('sticky')
-  }
-}
-
 onMounted(async () => {
   await store.fetchProduct(route.params.id as string)
   // Map type to specification_type for compatibility
@@ -78,11 +63,10 @@ onMounted(async () => {
       return s
     })
   }
-  window.addEventListener('scroll', handleScroll)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
+  // Remove the scroll event listener
 })
 
 const formatPrice = (price: string) => {
@@ -186,9 +170,9 @@ function handleLoginSuccess(data: any) {
     ></div>
 
     <!-- Product Content -->
-    <div v-if="store.currentProduct" class="flex flex-col lg:flex-row gap-0 justify-between items-stretch w-full">
-      <!-- Column 1: Product Images -->
-      <div class="w-full lg:w-[35%] min-w-[300px]">
+    <div v-if="store.currentProduct" class="flex flex-col lg:flex-row gap-8 justify-between items-start w-full">
+      <!-- Column 1: Product Images (50% width) -->
+      <div class="w-full lg:w-1/2">
         <div class="space-y-6">
           <!-- Main Image -->
           <div
@@ -238,8 +222,8 @@ function handleLoginSuccess(data: any) {
         </div>
       </div>
 
-      <!-- Column 2: Shopping Cart -->
-      <div class="w-full lg:w-[20%] min-w-[220px] max-w-[320px]">
+      <!-- Column 2: Product Info and Shopping Cart (50% width) -->
+      <div class="w-full lg:w-1/2">
         <div class="space-y-6">
           <!-- Title Section -->
           <div class="border-b border-gray-200 pb-6">
@@ -247,123 +231,79 @@ function handleLoginSuccess(data: any) {
             <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
           </div>
 
+          <!-- Specifications Section -->
+          <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4">مشخصات محصول</h2>
+            <div class="grid grid-cols-2 gap-4">
+              <div v-for="(spec, index) in store.currentProduct.specifications" :key="index" 
+                   class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-500 mb-1">{{ spec.specification_type?.name || spec.specification_type }}</div>
+                <div class="font-medium">
+                  {{ Array.isArray(spec.value) ? spec.value.join('، ') : spec.value }}
+                </div>
+                <div v-if="spec.specification_type?.group" class="text-xs text-gray-400 mt-1">
+                  {{ spec.specification_type.group.name }}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Shopping Cart Section -->
-          <div id="shopping-cart" class="bg-white rounded-lg shadow-sm p-6">
+          <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
             <div class="space-y-4">
               <div class="flex justify-between items-center">
                 <span class="text-gray-600">قیمت:</span>
-                <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
-              </div>
-              <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
-                <span class="text-gray-600">قیمت قبلی:</span>
-                <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
+                <span class="text-2xl font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-gray-600">وضعیت:</span>
-                <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
-                  {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
+                <span class="text-gray-600">موجودی:</span>
+                <span class="text-lg font-semibold" :class="store.currentProduct.stock > 0 ? 'text-green-600' : 'text-red-600'">
+                  {{ store.currentProduct.stock > 0 ? 'موجود' : 'ناموجود' }}
                 </span>
               </div>
-              <AddToCartButton
-                  :product-id="store.currentProduct.id"
-                  class="w-full"
-                  @show-login="showLogin = true"
+              <AddToCartButton 
+                :product-id="store.currentProduct.id"
+                @show-login="showLogin = true"
               />
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Column 3: Product Specifications -->
-      <div class="w-full lg:w-[35%] min-w-[300px]">
-        <div class="space-y-6">
-          <div v-if="store.currentProduct.specifications?.length" class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">مشخصات محصول</h2>
+    <!-- Description and Card Components -->
+    <div class="mt-12">
+      <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Description Content -->
+        <div class="lg:w-2/3">
+          <div class="prose max-w-none" v-html="store.currentProduct?.description"></div>
+        </div>
+        
+        <!-- Sticky Shopping Cart -->
+        <div v-if="store.currentProduct" class="lg:w-1/3">
+          <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
             <div class="space-y-4">
-              <div v-for="spec in store.currentProduct.specifications" :key="spec.id" class="bg-gray-50 rounded-lg p-4">
-                <div v-if="spec.specification_type && spec.specification_type.group" class="font-medium text-gray-900 mb-2">
-                  {{ spec.specification_type.group.name }}
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">{{ spec.specification_type?.name || '---' }}:</span>
-                  <span class="text-gray-900">
-                    {{ Array.isArray(spec.value) ? spec.value.join('، ') : spec.value }}
-                  </span>
-                </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">قیمت:</span>
+                <span class="text-2xl font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
               </div>
-            </div>
-          </div>
-
-          <!-- Tags -->
-          <div v-if="store.currentProduct.tags?.length" class="flex flex-wrap gap-2">
-            <span
-              v-for="tag in store.currentProduct.tags"
-              :key="tag.id"
-              class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-            >
-              {{ tag.name }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Back Button -->
-    <div class="mt-8">
-      <NuxtLink
-        to="/products"
-        class="inline-flex items-center justify-center px-4 py-3 text-base font-medium text-blue-600 hover:text-blue-700 transition-colors"
-      >
-        ← بازگشت به لیست محصولات
-      </NuxtLink>
-    </div>
-
-    <!-- ✅ Sticky Cart in Description Section -->
-    <div v-if="store.currentProduct?.description" class="mt-12 bg-white rounded-lg shadow-sm p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">توضیحات محصول</h2>
-        <div class="prose prose-blue max-w-none" v-html="store.currentProduct.description"></div>
-      </div>
-
-      <div class="lg:col-span-1">
-        <div class="sticky top-8 bg-white shadow-lg p-6 rounded-lg">
-          <h2 class="text-lg font-bold mb-4 text-gray-800">سبد خرید</h2>
-          <div class="space-y-4">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-600">قیمت:</span>
-              <span class="text-lg font-bold text-gray-900">{{ formatPrice(store.currentProduct.price) }}</span>
-            </div>
-            <div v-if="store.currentProduct.compare_at_price" class="flex justify-between items-center">
-              <span class="text-gray-600">قیمت قبلی:</span>
-              <span class="text-gray-500 line-through">{{ formatPrice(store.currentProduct.compare_at_price) }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-600">وضعیت:</span>
-              <span :class="(store.currentProduct?.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'">
-                {{ (store.currentProduct?.stock ?? 0) > 0 ? 'موجود' : 'ناموجود' }}
-              </span>
-            </div>
-            <AddToCartButton
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">موجودی:</span>
+                <span class="text-lg font-semibold" :class="store.currentProduct.stock > 0 ? 'text-green-600' : 'text-red-600'">
+                  {{ store.currentProduct.stock > 0 ? 'موجود' : 'ناموجود' }}
+                </span>
+              </div>
+              <AddToCartButton 
                 :product-id="store.currentProduct.id"
-                class="w-full"
                 @show-login="showLogin = true"
-            />
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Not Found -->
-    <div v-if="!store.loading && !store.error && !store.currentProduct" class="flex justify-center items-center min-h-[400px]">
-      <div class="text-center text-gray-600">
-        <p class="text-xl mb-2">محصول یافت نشد</p>
-        <NuxtLink to="/products" class="text-blue-600 hover:underline">
-          بازگشت به لیست محصولات
-        </NuxtLink>
-      </div>
-    </div>
-
-    <LoginModal v-if="showLogin" @close="showLogin = false" @success="handleLoginSuccess" />
+    <LoginModal v-if="showLogin" @close="showLogin = false" @login-success="handleLoginSuccess" />
   </div>
 </template>
 
@@ -397,5 +337,19 @@ img {
 
 .absolute {
   position: absolute;
+}
+
+/* Sticky cart styles */
+.sticky {
+  position: sticky;
+  top: 1rem;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+  .sticky {
+    top: 2rem;
+  }
 }
 </style>

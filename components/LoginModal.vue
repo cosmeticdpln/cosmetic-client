@@ -159,7 +159,7 @@ async function submitName() {
   }
 }
 
-const validateForm = () => {
+const validateLoginForm = () => {
   if (step.value === 1) {
     if (!phone.value) {
       error.value = 'شماره موبایل الزامی است'
@@ -184,7 +184,7 @@ const validateForm = () => {
 }
 
 const handleSubmit = async () => {
-  if (!validateForm()) return
+  if (!validateLoginForm()) return
 
   loading.value = true
   error.value = ''
