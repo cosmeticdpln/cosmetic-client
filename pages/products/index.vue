@@ -235,165 +235,189 @@ useHead({
         <!-- Main Content Grid -->
         <div class="flex flex-col lg:flex-row gap-6">
           <!-- Filter Sidebar -->
-          <div class="lg:w-1/4">
-            <div class="bg-white rounded-lg shadow-sm p-4 sticky top-4">
+          <div 
+            v-motion
+            :initial="{ x: -50, opacity: 0 }"
+            :enter="{ x: 0, opacity: 1, transition: { duration: 300 } }"
+            class="lg:w-1/4"
+          >
+            <div class="bg-white rounded-3xl shadow-xl p-6">
+              <h2 
+                v-motion
+                :initial="{ y: -20, opacity: 0 }"
+                :enter="{ y: 0, opacity: 1, transition: { delay: 100 } }"
+                class="text-xl font-bold mb-6 text-gray-800"
+              >
+                فیلترها
+              </h2>
+              
+              <!-- Search Filter -->
+              <div class="space-y-2 mb-6">
+                <label class="block text-sm font-medium text-gray-700">جستجو در محصولات</label>
+                <div class="relative">
+                  <input
+                    v-model="tempFilters.search"
+                    type="text"
+                    placeholder="نام محصول را وارد کنید..."
+                    class="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                  />
+                  <svg
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Categories Filter -->
               <div class="mb-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">فیلترها</h3>
-                
-                <!-- Search Filter -->
-                <div class="space-y-2 mb-6">
-                  <label class="block text-sm font-medium text-gray-700">جستجو در محصولات</label>
-                  <div class="relative">
-                    <input
-                      v-model="tempFilters.search"
-                      type="text"
-                      placeholder="نام محصول را وارد کنید..."
-                      class="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    />
-                    <svg
-                      class="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                <h3 
+                  v-motion
+                  :initial="{ x: -20, opacity: 0 }"
+                  :enter="{ x: 0, opacity: 1, transition: { delay: 200 } }"
+                  class="font-medium text-gray-700 mb-3"
+                >
+                  دسته‌بندی
+                </h3>
+                <div class="space-y-2">
+                  <label 
+                    v-for="(category, index) in categories" 
+                    :key="category.id"
+                    v-motion
+                    :initial="{ x: -20, opacity: 0 }"
+                    :enter="{ x: 0, opacity: 1, transition: { delay: 300 + index * 50 } }"
+                    :hover="{ scale: 1.02 }"
+                    :tap="{ scale: 0.98 }"
+                    class="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input 
+                      type="checkbox" 
+                      :value="category.id" 
+                      v-model="tempFilters.category"
+                      class="w-4 h-4 text-blue-600 rounded"
                     >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
+                    <span class="text-gray-600">{{ category.name }}</span>
+                  </label>
                 </div>
+              </div>
 
-                <!-- Categories Filter -->
-                <div class="mb-6">
-                  <h4 class="text-sm font-medium text-gray-700 mb-3">دسته‌بندی‌ها</h4>
-                  <div class="space-y-2">
-                    <button
-                      v-for="category in categories"
-                      :key="category.id"
-                      @click="tempFilters.category = category.id === tempFilters.category ? null : category.id"
-                      class="w-full text-right px-3 py-2 rounded-lg text-sm transition-all duration-300"
-                      :class="[
-                        tempFilters.category === category.id
-                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                      ]"
-                    >
-                      {{ category.name }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Specification Filters -->
-                <template v-for="(specs, groupName) in groupedSpecifications" :key="groupName">
-                  <div class="mb-6" v-if="specs.length > 0">
-                    <h4 class="text-sm font-medium text-gray-700 mb-3">{{ groupName }}</h4>
-                    <div class="space-y-3">
-                      <div v-for="spec in specs" :key="spec.id" class="space-y-2">
-                        <label :for="spec.slug" class="block text-sm text-gray-600">{{ spec.name }}</label>
-                        
-                        <!-- Boolean type -->
-                        <div v-if="spec.type === 'boolean'" class="flex items-center">
-                          <input
-                            type="checkbox"
-                            :id="spec.slug"
-                            v-model="tempFilters.specifications[spec.slug]"
-                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <!-- Select type -->
-                        <select
-                          v-else-if="spec.type === 'select'"
-                          :id="spec.slug"
-                          v-model="tempFilters.specifications[spec.slug]"
-                          class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                        >
-                          <option value="">همه</option>
-                          <option v-for="option in spec.options" :key="option" :value="option">
-                            {{ option }}
-                          </option>
-                        </select>
-
-                        <!-- Multiselect type -->
-                        <div v-else-if="spec.type === 'multiselect'" class="space-y-2">
-                          <div v-for="option in spec.options" :key="option" class="flex items-center">
-                            <input
-                              type="checkbox"
-                              :id="`${spec.slug}-${option}`"
-                              v-model="tempFilters.specifications[spec.slug]"
-                              :value="option"
-                              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <label :for="`${spec.slug}-${option}`" class="mr-2 text-sm text-gray-600">
-                              {{ option }}
-                            </label>
-                          </div>
-                        </div>
-
-                        <!-- Number type -->
-                        <div v-else-if="spec.type === 'number'" class="flex gap-2">
-                          <input
-                            type="number"
-                            :id="`${spec.slug}-min`"
-                            v-model="tempFilters.specifications[`${spec.slug}_min`]"
-                            placeholder="حداقل"
-                            class="w-1/2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <input
-                            type="number"
-                            :id="`${spec.slug}-max`"
-                            v-model="tempFilters.specifications[`${spec.slug}_max`]"
-                            placeholder="حداکثر"
-                            class="w-1/2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-
-                        <!-- Text type -->
+              <!-- Specification Filters -->
+              <template v-for="(specs, groupName) in groupedSpecifications" :key="groupName">
+                <div class="mb-6" v-if="specs.length > 0">
+                  <h4 class="text-sm font-medium text-gray-700 mb-3">{{ groupName }}</h4>
+                  <div class="space-y-3">
+                    <div v-for="spec in specs" :key="spec.id" class="space-y-2">
+                      <label :for="spec.slug" class="block text-sm text-gray-600">{{ spec.name }}</label>
+                      
+                      <!-- Boolean type -->
+                      <div v-if="spec.type === 'boolean'" class="flex items-center">
                         <input
-                          v-else
-                          type="text"
+                          type="checkbox"
                           :id="spec.slug"
                           v-model="tempFilters.specifications[spec.slug]"
-                          class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                       </div>
+
+                      <!-- Select type -->
+                      <select
+                        v-else-if="spec.type === 'select'"
+                        :id="spec.slug"
+                        v-model="tempFilters.specifications[spec.slug]"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      >
+                        <option value="">همه</option>
+                        <option v-for="option in spec.options" :key="option" :value="option">
+                          {{ option }}
+                        </option>
+                      </select>
+
+                      <!-- Multiselect type -->
+                      <div v-else-if="spec.type === 'multiselect'" class="space-y-2">
+                        <div v-for="option in spec.options" :key="option" class="flex items-center">
+                          <input
+                            type="checkbox"
+                            :id="`${spec.slug}-${option}`"
+                            v-model="tempFilters.specifications[spec.slug]"
+                            :value="option"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label :for="`${spec.slug}-${option}`" class="mr-2 text-sm text-gray-600">
+                            {{ option }}
+                          </label>
+                        </div>
+                      </div>
+
+                      <!-- Number type -->
+                      <div v-else-if="spec.type === 'number'" class="flex gap-2">
+                        <input
+                          type="number"
+                          :id="`${spec.slug}-min`"
+                          v-model="tempFilters.specifications[`${spec.slug}_min`]"
+                          placeholder="حداقل"
+                          class="w-1/2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          :id="`${spec.slug}-max`"
+                          v-model="tempFilters.specifications[`${spec.slug}_max`]"
+                          placeholder="حداکثر"
+                          class="w-1/2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <!-- Text type -->
+                      <input
+                        v-else
+                        type="text"
+                        :id="spec.slug"
+                        v-model="tempFilters.specifications[spec.slug]"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
                   </div>
-                </template>
-
-                <!-- Sort Filter -->
-                <div class="mb-6">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">مرتب‌سازی</label>
-                  <select
-                    v-model="tempFilters.sort"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                  >
-                    <option value="created_at">جدیدترین</option>
-                    <option value="price">قیمت</option>
-                    <option value="name">نام</option>
-                  </select>
                 </div>
+              </template>
 
-                <!-- Filter Actions -->
-                <div class="flex flex-col gap-2 pt-4 border-t">
-                  <button
-                    @click="applyFilters"
-                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                    اعمال فیلترها
-                  </button>
+              <!-- Sort Filter -->
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">مرتب‌سازی</label>
+                <select
+                  v-model="tempFilters.sort"
+                  class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                >
+                  <option value="created_at">جدیدترین</option>
+                  <option value="price">قیمت</option>
+                  <option value="name">نام</option>
+                </select>
+              </div>
 
-                  <button
-                    @click="resetAllFilters"
-                    class="w-full px-4 py-2 text-red-600 hover:text-red-800 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    پاک کردن فیلترها
-                  </button>
-                </div>
+              <!-- Filter Actions -->
+              <div class="flex flex-col gap-2 pt-4 border-t">
+                <button
+                  v-motion
+                  :initial="{ y: 20, opacity: 0 }"
+                  :enter="{ y: 0, opacity: 1, transition: { delay: 600 } }"
+                  :hover="{ scale: 1.02 }"
+                  :tap="{ scale: 0.98 }"
+                  @click="applyFilters"
+                  class="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg hover:shadow-xl"
+                >
+                  اعمال فیلترها
+                </button>
+
+                <button
+                  @click="resetAllFilters"
+                  class="w-full px-4 py-2 text-red-600 hover:text-red-800 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  پاک کردن فیلترها
+                </button>
               </div>
             </div>
           </div>
