@@ -7,9 +7,11 @@ import { useMotion } from '@vueuse/motion'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue'
 import type { SpecificationType } from '~/types'
 import AddToCartButton from '~/components/AddToCartButton.vue'
+import LoginModal from '~/components/LoginModal.vue'
 
 const store = useProductStore()
 const isFilterOpen = ref(false)
+const showLogin = ref(false)
 const tempFilters = ref({
   search: '',
   category: null as number | null,
@@ -171,6 +173,16 @@ const groupedSpecifications = computed(() => {
   })
   return groups
 })
+
+function handleLoginSuccess(data: any) {
+  if (data && data.access_token) {
+    localStorage.setItem('access_token', data.access_token)
+    if (data.user && data.user.name) {
+      localStorage.setItem('user_name', data.user.name)
+    }
+    showLogin.value = false
+  }
+}
 
 useHead({
   title: 'محصولات - فروشگاه لوازم آرایشی',
@@ -480,6 +492,7 @@ useHead({
                     <AddToCartButton
                       :product-id="product.id"
                       class="w-full"
+                      @show-login="showLogin = true"
                     />
                   </div>
                 </div>
@@ -526,6 +539,7 @@ useHead({
         </div>
       </template>
     </div>
+    <LoginModal v-if="showLogin" @close="showLogin = false" @success="handleLoginSuccess" />
   </div>
 </template>
 

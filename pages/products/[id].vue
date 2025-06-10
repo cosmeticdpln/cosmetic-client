@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useHead, useRoute } from '#imports'
 import { useProductStore } from '~/stores/product'
 import AddToCartButton from '~/components/AddToCartButton.vue'
+import LoginModal from '~/components/LoginModal.vue'
 
 const route = useRoute()
 const store = useProductStore()
@@ -141,6 +142,22 @@ useHead(() => {
   }
 })
 
+const isHome = computed(() => route.path === '/')
+const isScrolled = ref(false)
+const showLogin = ref(false)
+const userName = ref('')
+
+function handleLoginSuccess(data: any) {
+  if (data && data.access_token) {
+    localStorage.setItem('access_token', data.access_token)
+    if (data.user && data.user.name) {
+      localStorage.setItem('user_name', data.user.name)
+      userName.value = data.user.name
+    }
+    showLogin.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -250,6 +267,7 @@ useHead(() => {
               <AddToCartButton
                   :product-id="store.currentProduct.id"
                   class="w-full"
+                  @show-login="showLogin = true"
               />
             </div>
           </div>
@@ -328,6 +346,7 @@ useHead(() => {
             <AddToCartButton
                 :product-id="store.currentProduct.id"
                 class="w-full"
+                @show-login="showLogin = true"
             />
           </div>
         </div>
@@ -343,6 +362,8 @@ useHead(() => {
         </NuxtLink>
       </div>
     </div>
+
+    <LoginModal v-if="showLogin" @close="showLogin = false" @success="handleLoginSuccess" />
   </div>
 </template>
 
