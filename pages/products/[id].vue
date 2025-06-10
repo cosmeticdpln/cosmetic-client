@@ -64,15 +64,32 @@ const lensSize = 150
 const handleMouseMove = (e: MouseEvent) => {
   const image = e.target as HTMLElement
   const rect = image.getBoundingClientRect()
-  const mouseX = e.clientX - rect.left
+  
+  // Calculate mouse position relative to the image (RTL-aware)
+  const mouseX = rect.width - (e.clientX - rect.left)
   const mouseY = e.clientY - rect.top
+  
+  // Calculate lens position (centered on mouse)
+  const lensX = mouseX - lensSize / 2
+  const lensY = mouseY - lensSize / 2
+  
+  // Constrain lens position within image bounds
   const maxX = rect.width - lensSize
   const maxY = rect.height - lensSize
-  const boundedX = Math.max(0, Math.min(maxX, mouseX - lensSize / 2))
-  const boundedY = Math.max(0, Math.min(maxY, mouseY - lensSize / 2))
-  lensPosition.value = {x: boundedX, y: boundedY}
+  const boundedX = Math.max(0, Math.min(maxX, lensX))
+  const boundedY = Math.max(0, Math.min(maxY, lensY))
+  
+  // Update lens position
+  lensPosition.value = {
+    x: boundedX,
+    y: boundedY
+  }
+  
+  // Calculate zoom position (percentage)
   const zoomX = (boundedX / maxX) * 100
   const zoomY = (boundedY / maxY) * 100
+  
+  // Update zoom position
   zoomPosition.value = {
     x: zoomX,
     y: zoomY
@@ -246,7 +263,7 @@ function handleLoginSuccess(data: any) {
               :style="{
                 width: `${lensSize}px`,
                 height: `${lensSize}px`,
-                left: `${lensPosition.x}px`,
+                right: `${lensPosition.x}px`,
                 top: `${lensPosition.y}px`,
                 borderRadius: '0.5rem',
                 zIndex: 10
