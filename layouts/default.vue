@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useCartStore } from '~/stores/cart'
 import LoginModal from '~/components/LoginModal.vue'
 import BottomNav from '~/components/BottomNav.vue'
+import Header from '~/components/Header.vue'
 
 const showLogin = ref(false)
 const cartStore = useCartStore()
@@ -27,7 +28,8 @@ const handleLoginSuccess = (data: any) => {
 
 <template>
   <div class="min-h-screen bg-gray-50">
-    <main class="pb-16">
+    <Header />
+    <main class="pt-[52px] pb-16">
       <slot />
     </main>
 
