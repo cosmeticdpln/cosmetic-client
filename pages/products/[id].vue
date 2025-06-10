@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useHead, useRoute } from '#imports'
 import { useProductStore } from '~/stores/product'
+import { useMotion } from '@vueuse/motion'
 import AddToCartButton from '~/components/AddToCartButton.vue'
 import LoginModal from '~/components/LoginModal.vue'
 
@@ -11,10 +12,48 @@ const store = useProductStore()
 const selectedImage = ref(0)
 const isHovering = ref(false)
 const zoomFactor = 2.5
+const isLoaded = ref(false)
 
-const mainImage = computed(() => {
+const mainImageUrl = computed(() => {
   if (!store.currentProduct?.media?.length) return ''
   return store.currentProduct.media[selectedImage.value]?.url || ''
+})
+
+const leftColumn = ref(null)
+const rightColumn = ref(null)
+const mainImageRef = ref(null)
+const thumbnails = ref(null)
+const titleSection = ref(null)
+const specsSection = ref(null)
+
+const { apply: applyLeftColumn } = useMotion(leftColumn, {
+  initial: { x: -50, opacity: 0 },
+  enter: { x: 0, opacity: 1, transition: { duration: 500 } }
+})
+
+const { apply: applyRightColumn } = useMotion(rightColumn, {
+  initial: { x: 50, opacity: 0 },
+  enter: { x: 0, opacity: 1, transition: { duration: 500 } }
+})
+
+const { apply: applyMainImage } = useMotion(mainImageRef, {
+  initial: { scale: 0.95, opacity: 0 },
+  enter: { scale: 1, opacity: 1, transition: { duration: 400, delay: 200 } }
+})
+
+const { apply: applyThumbnails } = useMotion(thumbnails, {
+  initial: { y: 20, opacity: 0 },
+  enter: { y: 0, opacity: 1, transition: { duration: 400, delay: 400 } }
+})
+
+const { apply: applyTitleSection } = useMotion(titleSection, {
+  initial: { y: -20, opacity: 0 },
+  enter: { y: 0, opacity: 1, transition: { duration: 400, delay: 200 } }
+})
+
+const { apply: applySpecsSection } = useMotion(specsSection, {
+  initial: { y: 20, opacity: 0 },
+  enter: { y: 0, opacity: 1, transition: { duration: 400, delay: 300 } }
 })
 
 const zoomBoxVisible = ref(false)
@@ -25,27 +64,27 @@ const lensSize = 150
 const handleMouseMove = (e: MouseEvent) => {
   const image = e.target as HTMLElement
   const rect = image.getBoundingClientRect()
-  const mouseX = rect.width - (e.clientX - rect.left)
+  const mouseX = e.clientX - rect.left
   const mouseY = e.clientY - rect.top
   const maxX = rect.width - lensSize
   const maxY = rect.height - lensSize
   const boundedX = Math.max(0, Math.min(maxX, mouseX - lensSize / 2))
   const boundedY = Math.max(0, Math.min(maxY, mouseY - lensSize / 2))
   lensPosition.value = {x: boundedX, y: boundedY}
-  const zoomX = ((rect.width - mouseX) / rect.width) * 100
-  const zoomY = (mouseY / rect.height) * 100
+  const zoomX = (boundedX / maxX) * 100
+  const zoomY = (boundedY / maxY) * 100
   zoomPosition.value = {
-    x: Math.max(0, Math.min(100, zoomX)),
-    y: Math.max(0, Math.min(100, zoomY))
+    x: zoomX,
+    y: zoomY
   }
 }
 
 const zoomBackgroundStyle = computed(() => {
-  if (!mainImage.value) return {}
+  if (!mainImageUrl.value) return {}
   return {
-    backgroundImage: `url(${mainImage.value})`,
+    backgroundImage: `url(${mainImageUrl.value})`,
     backgroundPosition: `${zoomPosition.value.x}% ${zoomPosition.value.y}%`,
-    backgroundSize: '250%',
+    backgroundSize: `${zoomFactor * 100}%`,
     backgroundRepeat: 'no-repeat',
     transition: 'background-position 0.05s ease-out'
   }
@@ -63,6 +102,11 @@ onMounted(async () => {
       return s
     })
   }
+  
+  // Set loaded state after a short delay
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -172,39 +216,51 @@ function handleLoginSuccess(data: any) {
     <!-- Product Content -->
     <div v-if="store.currentProduct" class="flex flex-col lg:flex-row gap-8 justify-between items-start w-full">
       <!-- Column 1: Product Images (50% width) -->
-      <div class="w-full lg:w-1/2">
+      <div 
+        v-motion
+        :initial="{ x: -50, opacity: 0 }"
+        :enter="{ x: 0, opacity: 1, transition: { duration: 500 } }"
+        class="w-full lg:w-1/2"
+      >
         <div class="space-y-6">
           <!-- Main Image -->
           <div
+            v-motion
+            :initial="{ scale: 0.95, opacity: 0 }"
+            :enter="{ scale: 1, opacity: 1, transition: { duration: 400, delay: 200 } }"
             class="relative aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100"
             @mousemove="handleMouseMove"
             @mouseenter="isHovering = true; zoomBoxVisible = true"
             @mouseleave="isHovering = false; zoomBoxVisible = false"
           >
             <img
-              :src="mainImage"
+              :src="mainImageUrl"
               :alt="store.currentProduct.name"
               class="h-full w-full object-cover object-center"
               draggable="false"
             />
             <!-- Lens -->
             <div
-                v-show="isHovering"
-                class="absolute bg-white/30 border-2 border-blue-400 backdrop-blur-sm pointer-events-none"
-                :style="{
-                  position: 'absolute',
-                  width: `${lensSize}px`,
-                  height: `${lensSize}px`,
-                  right: `${lensPosition.x}px`,
-                  top: `${lensPosition.y}px`,
-                  borderRadius: '0.5rem',
-                  zIndex: 10
-                }"
+              v-show="isHovering"
+              class="absolute bg-white/30 border-2 border-blue-400 backdrop-blur-sm pointer-events-none"
+              :style="{
+                width: `${lensSize}px`,
+                height: `${lensSize}px`,
+                left: `${lensPosition.x}px`,
+                top: `${lensPosition.y}px`,
+                borderRadius: '0.5rem',
+                zIndex: 10
+              }"
             ></div>
           </div>
 
           <!-- Thumbnail Images -->
-          <div class="grid grid-cols-4 gap-4">
+          <div 
+            v-motion
+            :initial="{ y: 20, opacity: 0 }"
+            :enter="{ y: 0, opacity: 1, transition: { duration: 400, delay: 400 } }"
+            class="grid grid-cols-4 gap-4"
+          >
             <button
               v-for="(image, index) in store.currentProduct.media"
               :key="image.id"
@@ -223,16 +279,31 @@ function handleLoginSuccess(data: any) {
       </div>
 
       <!-- Column 2: Product Info and Shopping Cart (50% width) -->
-      <div class="w-full lg:w-1/2">
+      <div 
+        v-motion
+        :initial="{ x: 50, opacity: 0 }"
+        :enter="{ x: 0, opacity: 1, transition: { duration: 500 } }"
+        class="w-full lg:w-1/2"
+      >
         <div class="space-y-6">
           <!-- Title Section -->
-          <div class="border-b border-gray-200 pb-6">
+          <div 
+            v-motion
+            :initial="{ y: -20, opacity: 0 }"
+            :enter="{ y: 0, opacity: 1, transition: { duration: 400, delay: 200 } }"
+            class="border-b border-gray-200 pb-6"
+          >
             <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ store.currentProduct.name }}</h1>
             <p class="text-lg text-gray-500">{{ store.currentProduct.category.name }}</p>
           </div>
 
           <!-- Specifications Section -->
-          <div class="mt-8">
+          <div 
+            v-motion
+            :initial="{ y: 20, opacity: 0 }"
+            :enter="{ y: 0, opacity: 1, transition: { duration: 400, delay: 300 } }"
+            class="mt-8"
+          >
             <h2 class="text-xl font-semibold mb-4">مشخصات محصول</h2>
             <div class="grid grid-cols-2 gap-4">
               <div v-for="(spec, index) in store.currentProduct.specifications" :key="index" 
@@ -324,7 +395,7 @@ img {
   -webkit-user-drag: none;
 }
 
-/* Improve lens movement */
+/* Improve lens and zoom box styles */
 .pointer-events-none {
   pointer-events: none;
   user-select: none;
@@ -339,6 +410,24 @@ img {
   position: absolute;
 }
 
+/* Ensure smooth transitions for zoom box */
+.fixed {
+  position: fixed;
+  transition: all 0.3s ease;
+}
+
+/* Improve image container */
+.aspect-w-1 {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ensure lens stays within bounds */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 /* Sticky cart styles */
 .sticky {
   position: sticky;
@@ -351,5 +440,48 @@ img {
   .sticky {
     top: 2rem;
   }
+}
+
+/* Add transition utilities */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duration-500 {
+  transition-duration: 500ms;
+}
+
+/* Add transform utilities */
+.translate-x-0 {
+  transform: translateX(0);
+}
+
+.translate-x-8 {
+  transform: translateX(2rem);
+}
+
+.-translate-x-8 {
+  transform: translateX(-2rem);
+}
+
+.translate-y-0 {
+  transform: translateY(0);
+}
+
+.translate-y-8 {
+  transform: translateY(2rem);
+}
+
+.-translate-y-8 {
+  transform: translateY(-2rem);
+}
+
+.scale-100 {
+  transform: scale(1);
+}
+
+.scale-95 {
+  transform: scale(0.95);
 }
 </style>
